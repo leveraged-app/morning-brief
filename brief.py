@@ -12,7 +12,9 @@ Run:
 
 import argparse
 import datetime as dt
+import html
 import os
+import re
 import smtplib
 import ssl
 import sys
@@ -262,10 +264,106 @@ def write_with_claude(table, today):
 # ---------------------------------------------------------------------------
 # 5. SAVING AND EMAILING
 # ---------------------------------------------------------------------------
-def send_email(subject, text):
+UP, DOWN, INK, GREY, LINE = "#0B6E4F", "#B54708", "#12161C", "#5B6270", "#E3E1DA"
+
+
+def _inline(s):
+    s = html.escape(s)
+    s = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", s)
+    s = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)",
+               rf'<a href="\2" style="color:{UP};">\1</a>', s)
+    return s
+
+
+def md_to_html(md):
+    """Small Markdown converter for the brief's headings, bullets, bold and links."""
+    out, para, list_tag = [], [], None
+
+    def flush_para():
+        if para:
+            out.append(f'<p style="margin:0 0 12px;line-height:1.5;">{"<br>".join(_inline(p) for p in para)}</p>')
+            para.clear()
+
+    def close_list():
+        nonlocal list_tag
+        if list_tag:
+            out.append(f"</{list_tag}>")
+            list_tag = None
+
+    for raw in md.splitlines():
+        line = raw.strip()
+        bullet = re.match(r"^[-*•]\s+(.*)", line)
+        number = re.match(r"^\d+[.)]\s+(.*)", line)
+        if not line:
+            flush_para(); close_list()
+        elif line.startswith("#"):
+            flush_para(); close_list()
+            text = line.lstrip("#").strip()
+            out.append(f'<h2 style="margin:24px 0 8px;font-size:17px;color:{INK};'
+                       f'border-bottom:1px solid {LINE};padding-bottom:6px;">{_inline(text)}</h2>')
+        elif line in ("---", "***"):
+            flush_para(); close_list()
+            out.append(f'<hr style="border:0;border-top:1px solid {LINE};margin:20px 0;">')
+        elif bullet or number:
+            flush_para()
+            tag = "ul" if bullet else "ol"
+            if list_tag != tag:
+                close_list()
+                out.append(f'<{tag} style="margin:0 0 12px;padding-left:20px;">')
+                list_tag = tag
+            out.append(f'<li style="margin:0 0 6px;line-height:1.5;">{_inline((bullet or number).group(1))}</li>')
+        else:
+            close_list()
+            para.append(line)
+    flush_para(); close_list()
+    return "\n".join(out)
+
+
+def numbers_html(nums):
+    rows = []
+    for i, name in enumerate(ORDER):
+        d = nums.get(name)
+        bg = "#FFFFFF" if i % 2 == 0 else "#F6F5F1"
+        if d is None:
+            level, chg, color = "n/a", "n/a", GREY
+        else:
+            level = fmt_value(d["value"], d["kind"])
+            chg = fmt_change(d["value"], d["prev"], d["kind"])
+            color = UP if chg.startswith("▲") else DOWN
+        rows.append(
+            f'<tr style="background:{bg};">'
+            f'<td style="padding:7px 10px;font-weight:600;">{html.escape(name)}</td>'
+            f'<td style="padding:7px 10px;text-align:right;">{level}</td>'
+            f'<td style="padding:7px 10px;text-align:right;font-weight:700;color:{color};">{chg}</td></tr>'
+        )
+    return (f'<table role="presentation" cellspacing="0" cellpadding="0" '
+            f'style="width:100%;border-collapse:collapse;border:1px solid {LINE};font-size:14px;">'
+            + "".join(rows) + "</table>")
+
+
+def build_html(today, nums, written, demo):
+    demo_note = (f'<p style="margin:0 0 12px;padding:8px 10px;background:#FFF4E5;'
+                 f'color:{DOWN};font-size:13px;">Sample numbers (demo mode), not real market data.</p>'
+                 if demo else "")
+    return f"""<!doctype html><html><body style="margin:0;background:#F6F5F1;">
+<div style="max-width:640px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:{INK};font-size:15px;">
+<div style="background:{INK};color:#FFFFFF;padding:20px 24px;">
+<div style="font-size:12px;letter-spacing:1px;color:#B9BEC7;">MORNING BRIEF</div>
+<div style="font-size:22px;font-weight:700;margin-top:4px;">{html.escape(today)}</div>
+</div>
+<div style="background:#FFFFFF;padding:20px 24px;">
+{demo_note}
+<h2 style="margin:0 0 10px;font-size:17px;">Markets at the close</h2>
+{numbers_html(nums)}
+{md_to_html(written)}
+<p style="margin:24px 0 0;font-size:12px;color:{GREY};">For education only. Not investment advice.</p>
+</div></div></body></html>"""
+
+
+def send_email(subject, text, html_body=None):
     user = os.getenv("GMAIL_ADDRESS")
     pw = os.getenv("GMAIL_APP_PASSWORD")
-    to = os.getenv("BRIEF_TO", user)
+    to = os.getenv("BRIEF_TO") or user
     if not (user and pw):
         print("  (email skipped: GMAIL_ADDRESS / GMAIL_APP_PASSWORD not set)")
         return
@@ -274,6 +372,8 @@ def send_email(subject, text):
     msg["From"] = user
     msg["To"] = to
     msg.set_content(text)
+    if html_body:
+        msg.add_alternative(html_body, subtype="html")
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context()) as s:
         s.login(user, pw)
         s.send_message(msg)
@@ -311,8 +411,11 @@ def main():
     path.write_text(brief, encoding="utf-8")
     print(f"  saved {path}")
 
+    html_body = build_html(today, nums, written, args.demo)
+    (out_dir / path.name.replace(".md", ".html")).write_text(html_body, encoding="utf-8")
+
     if not args.no_email:
-        send_email(f"Morning Brief: {today}", brief)
+        send_email(f"Morning Brief: {today}", brief, html_body)
 
 
 if __name__ == "__main__":
