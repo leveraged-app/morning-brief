@@ -6,17 +6,17 @@
 <meta name="theme-color" content="#0A0D12">
 <title>Leveraged: Learn</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0A0D12;--card:#131820;--card2:#1A202B;--ink:#F3F5F8;--muted:#98A1B0;--line:#252D3A;--line2:#2F3846;
 --g:#3DDC97;--g2:#2BBF80;--gd:#1A8A5B;--red:#FF6B5E;--redd:#C2433A;--gold:#E3B341;--goldd:#A87F1F;--blue:#6EA8FF}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{color-scheme:dark}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;font-size:16px;line-height:1.5;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Geist,Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;font-size:16px;line-height:1.5;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 button{font:inherit;color:inherit}
 .wrap{max-width:620px;margin:0 auto;padding:14px 16px 150px}
 .appbar{display:flex;align-items:center;padding:4px 2px 4px}
-.brand2{display:flex;align-items:center;gap:8px;font-family:'Space Grotesk',Inter,sans-serif;font-weight:700;font-size:17px;letter-spacing:-.2px}
+.brand2{display:flex;align-items:center;gap:8px;font-family:Geist,Inter,sans-serif;font-weight:700;font-size:17px;letter-spacing:-.2px}
 .logo{width:26px;height:26px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center}
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(10,13,18,.86);backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
 .tabbar .in{max-width:640px;margin:0 auto;display:flex;justify-content:space-around}
@@ -25,7 +25,7 @@ button{font:inherit;color:inherit}
 
 /* top stats */
 .stats{display:flex;align-items:center;gap:8px;margin:10px 0 4px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
-.stat{display:flex;align-items:center;gap:6px;font-weight:800;font-size:15px;padding:7px 11px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-variant-numeric:tabular-nums}
+.stat{font-family:'Geist Mono',Geist,monospace;display:flex;align-items:center;gap:6px;font-weight:800;font-size:15px;padding:7px 11px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-variant-numeric:tabular-nums}
 .stat svg{width:20px;height:20px}
 .flame{color:#FF8A3D}.flame.off{color:#59606C}
 .bolt{color:var(--blue)}
@@ -39,14 +39,14 @@ button{font:inherit;color:inherit}
 .unit-banner{border-radius:20px;padding:16px 18px;margin:22px 0 6px;display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);position:relative;overflow:hidden}
 .unit-banner::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--uc)}
 .unit-banner .u{font-size:11px;font-weight:800;letter-spacing:1.4px;color:var(--uc)}
-.unit-banner .n{font-family:'Space Grotesk',Inter,sans-serif;font-size:20px;font-weight:700;line-height:1.2;letter-spacing:-.3px}
+.unit-banner .n{font-family:Geist,Inter,sans-serif;font-size:20px;font-weight:700;line-height:1.2;letter-spacing:-.3px}
 .unit-banner .c{font-size:13px;font-weight:700;color:var(--muted);background:var(--card2);border:1px solid var(--line2);padding:5px 10px;border-radius:999px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .path{position:relative;display:flex;flex-direction:column;align-items:center;gap:18px;padding:62px 0 8px}
 .node-wrap{position:relative;display:flex;flex-direction:column;align-items:center}
 .node{width:70px;height:66px;border-radius:50%;border:0;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;transition:transform .1s}
 .node svg{width:28px;height:28px}
 .node.todo{background:var(--card2);box-shadow:0 6px 0 #0F131A,inset 0 0 0 1px var(--line2);color:#4D5563}
-.node.done{background:var(--gold);box-shadow:0 6px 0 var(--goldd);color:#1C1503}
+.node.done{background:#E9EDF2;box-shadow:0 6px 0 #9AA3B2;color:#0A0D12}
 .node.cur{background:var(--c);box-shadow:0 6px 0 var(--cd);color:#06140E}
 .node:active{transform:translateY(5px);box-shadow:0 1px 0 rgba(0,0,0,.4)}
 .node.cur::before{content:"";position:absolute;inset:-10px;border-radius:50%;border:3px solid var(--c);opacity:.35;animation:pulse 1.8s ease-out infinite}
@@ -66,7 +66,7 @@ button{font:inherit;color:inherit}
 .kicker{font-size:11px;font-weight:800;letter-spacing:1.2px;color:var(--g);text-transform:uppercase}
 .qrow{display:flex;gap:12px;align-items:flex-end;margin:8px 0 18px}
 .qrow .m{width:74px;flex-shrink:0}
-.speech{position:relative;flex:1;background:var(--card);border:1px solid var(--line2);border-radius:18px;padding:14px 16px;font-family:'Space Grotesk',Inter,sans-serif;font-size:20px;font-weight:600;line-height:1.3;letter-spacing:-.2px}
+.speech{position:relative;flex:1;background:var(--card);border:1px solid var(--line2);border-radius:18px;padding:14px 16px;font-family:Geist,Inter,sans-serif;font-size:20px;font-weight:600;line-height:1.3;letter-spacing:-.2px}
 .speech::before{content:"";position:absolute;left:-8px;bottom:22px;width:14px;height:14px;background:var(--card);border-left:1px solid var(--line2);border-bottom:1px solid var(--line2);transform:rotate(45deg)}
 .opts{display:flex;flex-direction:column;gap:10px}
 .opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;min-height:58px;padding:12px 14px;border-radius:16px;border:1px solid var(--line2);background:var(--card);font-weight:600;font-size:15px;cursor:pointer;box-shadow:0 4px 0 #0F131A;transition:transform .08s,box-shadow .08s,background .15s,border-color .15s;animation:rise .35s cubic-bezier(.2,.8,.2,1) backwards}
@@ -106,7 +106,7 @@ label.lbl{display:block;font-size:13px;font-weight:700;color:var(--muted);margin
 /* finish */
 .done-card{text-align:center;padding:24px 4px 10px}
 .done-card .m{width:140px;margin:0 auto;animation:rise .6s cubic-bezier(.2,.8,.2,1) backwards}
-.done-card h1{font-family:'Space Grotesk',Inter,sans-serif;font-size:30px;margin:14px 0 4px;color:var(--gold);letter-spacing:-.5px}
+.done-card h1{font-family:Geist,Inter,sans-serif;font-size:30px;margin:14px 0 4px;color:var(--g);letter-spacing:-.5px}
 .stars{display:flex;justify-content:center;gap:8px;margin:8px 0 18px}
 .stars svg{width:44px;height:44px;opacity:0;transform:scale(.3)}
 .stars svg.on{animation:starin .5s cubic-bezier(.2,1.6,.4,1) forwards}
@@ -114,7 +114,7 @@ label.lbl{display:block;font-size:13px;font-weight:700;color:var(--muted);margin
 .chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 22px}
 .chip{border-radius:16px;border:1px solid var(--line2);overflow:hidden;background:var(--card)}
 .chip .h{color:var(--cc);font-size:10px;font-weight:800;letter-spacing:1.2px;padding:10px 0 0;text-transform:uppercase}
-.chip .v{font-family:'Space Grotesk',Inter,sans-serif;font-size:24px;font-weight:700;padding:2px 0 12px;color:var(--ink);font-variant-numeric:tabular-nums}
+.chip .v{font-family:'Geist Mono',Geist,monospace;font-size:24px;font-weight:700;padding:2px 0 12px;color:var(--ink);font-variant-numeric:tabular-nums}
 footer{color:var(--muted);font-size:12px;margin-top:28px;text-align:center}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:40}
 
@@ -215,19 +215,16 @@ const ICON={
 };
 function bull(mood){
   return svg(`<svg class="bull ${mood||"idle"}" viewBox="0 0 120 112" role="img" aria-label="The Leveraged bull">
-  <defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F0C75E"/><stop offset="1" stop-color="#A87F1F"/></linearGradient>
-  <linearGradient id="fg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#232B38"/><stop offset="1" stop-color="#141921"/></linearGradient></defs>
-  <path d="M37 34C19 30 8 18 11 3c6 13 16 19 31 21z" fill="url(#hg)"/>
-  <path d="M83 34c18-4 29-16 26-31-6 13-16 19-31 21z" fill="url(#hg)"/>
-  <path d="M27 42 12 37l9 13z" fill="#1B2230" stroke="#3A4556" stroke-width="1.5" stroke-linejoin="round"/>
-  <path d="M93 42l15-5-9 13z" fill="#1B2230" stroke="#3A4556" stroke-width="1.5" stroke-linejoin="round"/>
-  <path d="M38 24h44l13 20-8 30-15 26H48L33 74l-8-30z" fill="url(#fg)" stroke="#E3B341" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M60 24v76M38 24l12 34 10 42M82 24 70 58l-10 42M25 44l25 14 10-2 10 2 25-14" fill="none" stroke="#2E3846" stroke-width="1.2"/>
-  <ellipse class="glow" cx="47" cy="55" rx="9" ry="5"/><ellipse class="glow" cx="73" cy="55" rx="9" ry="5"/>
-  <path class="eye" d="M40 51l14 4-11 3z"/><path class="eye" d="M80 51l-14 4 11 3z"/>
-  <path d="M47 78h26l-4 20H51z" fill="#1E2530" stroke="#3A4556" stroke-width="1.5" stroke-linejoin="round"/>
-  <circle cx="54" cy="86" r="2.3" fill="#0A0D12"/><circle cx="66" cy="86" r="2.3" fill="#0A0D12"/>
-  <circle cx="60" cy="99" r="6" fill="none" stroke="#E3B341" stroke-width="2.4"/>
+  <path d="M36 36C20 33 10 22 12 6c6 12 15 18 28 19z" fill="#E9EDF2"/>
+  <path d="M84 36c16-3 26-14 24-30-6 12-15 18-28 19z" fill="#E9EDF2"/>
+  <path d="M28 44 13 40l10 12z" fill="#2A3240"/>
+  <path d="M92 44l15-4-10 12z" fill="#2A3240"/>
+  <path d="M40 26h40c9 0 15 7 15 16v14c0 22-15 44-35 44S25 78 25 56V42c0-9 6-16 15-16z" fill="#1A202B" stroke="#3A4556" stroke-width="2"/>
+  <ellipse class="glow" cx="47" cy="54" rx="9" ry="5"/><ellipse class="glow" cx="73" cy="54" rx="9" ry="5"/>
+  <path class="eye" d="M39 50l15 4-12 3z"/><path class="eye" d="M81 50l-15 4 12 3z"/>
+  <rect x="45" y="72" width="30" height="22" rx="11" fill="#2A3240"/>
+  <circle cx="53" cy="83" r="2.6" fill="#0A0D12"/><circle cx="67" cy="83" r="2.6" fill="#0A0D12"/>
+  <circle class="ring" cx="60" cy="98" r="6" fill="none" stroke="#3DDC97" stroke-width="2.6"/>
   </svg>`);
 }
 function setMood(node,mood){ if(!node) return; node.classList.remove("idle","happy","sad","wow","neutral"); void node.getBoundingClientRect(); node.classList.add(mood); }
@@ -255,7 +252,7 @@ function toast(text){const t=el("div",{class:"toast",role:"status"},text);docume
 // ---------- shared header ----------
 function header(){
   return el("div",{class:"appbar"},el("div",{class:"brand2"},
-    el("span",{class:"logo","aria-hidden":"true",html:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8FD3B6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg>'}),"Leveraged"));
+    el("span",{class:"logo","aria-hidden":"true",html:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg>'}),"Leveraged"));
 }
 function tabbar(){
   const I={today:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
