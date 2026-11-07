@@ -269,53 +269,70 @@ def write_with_claude(table, today):
 # ---------------------------------------------------------------------------
 # 4b. THE PODCAST (needs OPENAI_API_KEY; skipped if it's not set)
 # ---------------------------------------------------------------------------
-HOSTS = {  # host name -> OpenAI voice (expressive voices for gpt-4o-mini-tts)
+HOSTS = {  # host name -> OpenAI voice. Both male, picked to sound clearly different.
     "ALEX": os.getenv("VOICE_ALEX", "ash"),
-    "SAM": os.getenv("VOICE_SAM", "coral"),
+    "SAM": os.getenv("VOICE_SAM", "verse"),
 }
-FALLBACK_VOICES = {"ALEX": "onyx", "SAM": "nova"}  # used only if the newer model fails
+FALLBACK_VOICES = {"ALEX": "onyx", "SAM": "echo"}  # used only if the newer model fails
 TTS_MODEL = os.getenv("TTS_MODEL", "gpt-4o-mini-tts")
 # Speeds up the finished episode without changing pitch (1.0 = normal, 1.2 = 20% faster)
 PODCAST_SPEED = float(os.getenv("PODCAST_SPEED", "1.18"))
 
 # Acting directions for each host (how they should sound, not what they say)
 HOST_STYLE = {
-    "ALEX": ("You are ALEX, co-host of an upbeat morning markets podcast. Energetic, "
-             "confident and a little playful, like a friend who loves markets and just had "
-             "a great coffee. Smile while you talk. Vary your pitch and lean into key numbers "
-             "and surprising moves. Talk FAST, like a quick morning radio show: brisk pace, "
-             "no long pauses, no drawn-out words. Never sound flat or like you're reading."),
-    "SAM": ("You are SAM, co-host of an upbeat morning markets podcast. Warm, curious and "
-            "expressive. React with real feeling: surprise, amusement, 'oh, that's "
-            "interesting'. Smile while you talk and vary your pitch. Talk FAST, like a quick morning "
-            "radio show: brisk pace, no long pauses. Never sound flat or like you're reading."),
+    "ALEX": ("You are ALEX, a male host of a daily markets podcast. You sound like someone "
+             "who works on a trading floor and is walking a friend through the morning: "
+             "confident, relaxed, engaged. Natural, conversational delivery with a brisk pace "
+             "and no long pauses. Emphasize the numbers that matter. Don't oversell or sound "
+             "like an announcer, and never sound flat or like you're reading."),
+    "SAM": ("You are SAM, a male co-host of a daily markets podcast. Thoughtful and curious, "
+            "with a calm, warm voice. You talk like a sharp analyst having a real "
+            "conversation: natural rhythm, brisk pace, no long pauses. Only sound surprised "
+            "when something is actually surprising. Don't oversell, and never sound flat or "
+            "like you're reading."),
 }
 
-PODCAST_PROMPT = """Turn this morning market brief into a script for a two-host daily
-podcast called "The Morning Brief". Hosts: ALEX (the energetic one who drives
-the show) and SAM (the curious one who asks the questions listeners are
-thinking). Audience: finance students and young professionals in Canada
-recruiting for IB, consulting and equity research.
+PODCAST_PROMPT = """Write the script for today's episode of "The Morning Brief", a daily
+markets podcast with two male hosts, ALEX and SAM. Audience: finance students
+and young professionals in Canada recruiting for IB, consulting and equity
+research.
 
-Make it sound like two friends who love this stuff, not a news report:
-- About 1,100 words (7-8 minutes). Short turns: most lines one to three
-  sentences, and switch speakers often.
-- Real back-and-forth. Hosts react to each other ("Wait, really?", "Okay, that's
-  wild", "Right, and here's the part people miss..."), ask each other quick
-  questions, and finish each other's thoughts. Light humour is good.
-- Open with energy: a quick hello, the date, and a one-line teaser of the
-  biggest story.
-- Then cover, in order: the market numbers that moved most (say numbers the way
-  people speak, e.g. "down about three percent"), what moved and why, what's
-  coming today, the Canada corner, and close with "the interview angle": one
-  thing listeners could say if asked about markets.
-- Use contractions and everyday words. Vary sentence length. Use an
-  exclamation mark now and then where a host would actually be excited.
+The feel: two people who follow markets for a living, giving an honest morning
+rundown. Think of a good trading-desk morning call, or two analysts talking at
+the coffee machine. It should sound authentic, not like an entertainment show.
+
+How they talk:
+- ALEX leads the rundown. SAM adds the "why it matters", asks the follow-up a
+  smart listener would ask, or pushes back when a point needs nuance. Both
+  know their stuff; neither is just there to react.
+- Conversation comes from the content: a question, a connection between two
+  stories, a "the part I'm watching is...". No banter for its own sake.
+- Keep openings and transitions short and plain, e.g. "Morning, it's Friday,
+  November 7th. Big story today is oil." or "Okay, Canada." Then get into it.
+- Do NOT use: scripted jokes, fake laughter, "wild", "crazy", "buckle up",
+  "let's dive in", "you heard that right", "great question", "wait, really?",
+  "folks", over-the-top excitement, or one host repeating what the other just
+  said. No more than one light aside in the whole episode, and only if it fits.
+- Use contractions and everyday words. Mix short and longer lines. Most turns
+  are one to four sentences. Say numbers the way people speak ("down about
+  three percent", "the ten-year at four-eighteen").
+
+What to cover, in order:
+1. A one-line open with the date and the headline story.
+2. The numbers that moved most, and the overall mood.
+3. What moved and why, story by story.
+4. What's coming today.
+5. Canada: the TSX, banks, energy, the Bank of Canada, the loonie.
+6. "The interview angle": one thing a listener could say if asked about
+   markets today, explained briefly.
+7. A short, plain sign-off and a one-line note that this is for education,
+   not investment advice.
+
+Rules:
+- About 1,000-1,100 words.
 - Use only facts and numbers from the brief. Do not add new facts.
 - No sound effects, stage directions, music cues or markdown.
 - Every line must start with "ALEX:" or "SAM:". Nothing else in the output.
-- End with a quick, friendly sign-off and a one-line reminder that this is for
-  education, not investment advice.
 
 THE BRIEF:
 {brief}
