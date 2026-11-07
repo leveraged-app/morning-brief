@@ -556,8 +556,139 @@ def send_email(subject, text, html_body=None, attachment=None):
     print(f"  emailed to {to}")
 
 
+# ---------------------------------------------------------------------------
+# 6. THE WEBSITE (written to docs/, which GitHub Pages serves)
+# ---------------------------------------------------------------------------
+SITE_NAME = "The Morning Brief"
+KEEP_AUDIO_DAYS = 30  # older MP3s are deleted so the project doesn't get too big
+
+SITE_CSS = """
+*{box-sizing:border-box}
+body{margin:0;background:#F6F5F1;color:#12161C;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;font-size:16px;line-height:1.5}
+a{color:#0F6B4F}
+.wrap{max-width:680px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
+.brand{font-family:'Space Grotesk',Inter,sans-serif;font-weight:700;font-size:15px;letter-spacing:.3px}
+nav a{margin-left:14px;font-size:14px;font-weight:600;text-decoration:none;color:#5B6270;display:inline-block;padding:10px 0}
+nav a.on{color:#0F6B4F}
+h1{font-family:'Space Grotesk',Inter,sans-serif;font-size:30px;line-height:1.15;margin:8px 0 4px;letter-spacing:-.5px}
+.date{color:#5B6270;font-size:14px;font-weight:500;margin:0 0 18px}
+.note{background:#FFF4E5;color:#8A3B06;padding:8px 12px;border-radius:10px;font-size:13px;margin:0 0 14px}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 16px}
+.tile{background:#fff;border:1px solid #E3E1DA;border-radius:14px;padding:10px 12px}
+.tile .n{font-size:12px;font-weight:600;color:#5B6270}
+.tile .v{font-size:17px;font-weight:700}
+.tile .c{font-size:13px;font-weight:700}
+.up{color:#0B6E4F}.down{color:#B54708}.na{color:#5B6270}
+.player{background:#12161C;color:#fff;border-radius:18px;padding:16px;margin:0 0 20px}
+.player .k{font-size:12px;color:#B9BEC7;font-weight:500}
+.player .t{font-size:17px;font-weight:600;margin:2px 0 10px}
+.player audio{width:100%}
+.card{background:#fff;border:1px solid #E3E1DA;border-radius:18px;padding:4px 18px 14px}
+.list a{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;background:#fff;border:1px solid #E3E1DA;border-radius:14px;margin:0 0 8px;text-decoration:none;color:#12161C;font-weight:600}
+.list span{color:#5B6270;font-weight:500;font-size:14px}
+footer{color:#5B6270;font-size:12px;margin-top:24px}
+@media (max-width:420px){.tile .v{font-size:15px}h1{font-size:26px}}
+"""
+
+
+def page(title, body, root, active):
+    def link(href, label, key):
+        cls = ' class="on" aria-current="page"' if key == active else ""
+        return f'<a href="{root}{href}"{cls}>{label}</a>'
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{html.escape(title)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet">
+<style>{SITE_CSS}</style></head>
+<body><div class="wrap">
+<header><div class="brand">{SITE_NAME}</div>
+<nav aria-label="Main">{link("index.html", "Today", "today")}{link("archive.html", "Archive", "archive")}</nav></header>
+{body}
+<footer>For education only. Not investment advice. Some numbers may come from ETFs that track an index.</footer>
+</div></body></html>"""
+
+
+def tiles_html(nums):
+    out = []
+    for name in ORDER:
+        d = nums.get(name)
+        if d is None:
+            out.append(f'<div class="tile"><div class="n">{html.escape(name)}</div>'
+                       f'<div class="v">n/a</div><div class="c na">n/a</div></div>')
+            continue
+        chg = fmt_change(d["value"], d["prev"], d["kind"])
+        cls = "up" if chg.startswith("▲") else "down"
+        out.append(f'<div class="tile"><div class="n">{html.escape(d.get("label", name))}</div>'
+                   f'<div class="v">{fmt_value(d["value"], d["kind"])}</div>'
+                   f'<div class="c {cls}">{chg}</div></div>')
+    return '<div class="tiles">' + "".join(out) + "</div>"
+
+
+def day_body(rec, root):
+    note = '<p class="note">Sample numbers (demo mode), not real market data.</p>' if rec.get("demo") else ""
+    player = ""
+    if rec.get("audio"):
+        player = (f'<div class="player"><div class="k">Today\'s episode</div>'
+                  f'<div class="t">The Morning Brief podcast</div>'
+                  f'<audio controls preload="none" src="{root}audio/{rec["audio"]}"></audio></div>')
+    return (f'<h1>Today\'s brief</h1><p class="date">{html.escape(rec["today"])}</p>{note}'
+            f'{tiles_html(rec["nums"])}{player}<div class="card">{md_to_html(rec["written"])}</div>')
+
+
+def build_site(site_dir, iso, today, nums, written, mp3, demo):
+    import json
+    import shutil
+    days = site_dir / "days"
+    audio = site_dir / "audio"
+    days.mkdir(parents=True, exist_ok=True)
+    audio.mkdir(parents=True, exist_ok=True)
+    (site_dir / ".nojekyll").write_text("")
+
+    audio_name = None
+    if mp3 and Path(mp3).exists():
+        audio_name = f"{iso}.mp3"
+        shutil.copyfile(mp3, audio / audio_name)
+
+    rec = {"iso": iso, "today": today, "nums": nums, "written": written,
+           "audio": audio_name, "demo": demo}
+    (days / f"{iso}.json").write_text(json.dumps(rec), encoding="utf-8")
+
+    # Delete old audio so the project stays small
+    cutoff = (dt.date.fromisoformat(iso) - dt.timedelta(days=KEEP_AUDIO_DAYS)).isoformat()
+    for f in audio.glob("*.mp3"):
+        if f.stem < cutoff:
+            f.unlink()
+
+    # Rebuild every day page, the home page and the archive
+    records = []
+    for f in sorted(days.glob("*.json"), reverse=True):
+        r = json.loads(f.read_text(encoding="utf-8"))
+        if r.get("audio") and not (audio / r["audio"]).exists():
+            r["audio"] = None
+        records.append(r)
+        (days / f"{r['iso']}.html").write_text(
+            page(f"{SITE_NAME}: {r['today']}", day_body(r, "../"), "../", "day"), encoding="utf-8")
+
+    latest = records[0]
+    (site_dir / "index.html").write_text(
+        page(SITE_NAME, day_body(latest, ""), "", "today"), encoding="utf-8")
+
+    items = "".join(
+        f'<a href="days/{r["iso"]}.html">{html.escape(r["today"])}'
+        f'<span>{"Brief + podcast" if r.get("audio") else "Brief"}</span></a>' for r in records)
+    (site_dir / "archive.html").write_text(
+        page(f"{SITE_NAME}: Archive",
+             f'<h1>Archive</h1><p class="date">Every past brief</p><div class="list">{items}</div>',
+             "", "archive"), encoding="utf-8")
+    print(f"  website updated ({len(records)} days)")
+
+
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--site", action="store_true", help="also build the website in demo mode")
     ap.add_argument("--demo", action="store_true", help="use sample numbers")
     ap.add_argument("--no-email", action="store_true")
     ap.add_argument("--no-podcast", action="store_true")
@@ -595,6 +726,13 @@ def main():
     if not args.no_podcast:
         print("Making podcast...")
         mp3 = make_podcast(brief, out_dir, path.stem)
+
+    if not args.demo or args.site:
+        site_dir = Path(os.getenv("SITE_DIR") or Path(__file__).parent / "docs")
+        try:
+            build_site(site_dir, dt.date.today().isoformat(), today, nums, written, mp3, args.demo)
+        except Exception as e:
+            print(f"  ! website: {e}", file=sys.stderr)
 
     if not args.no_email:
         send_email(f"Morning Brief: {today}", brief, html_body, mp3)
