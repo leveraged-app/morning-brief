@@ -216,31 +216,33 @@ Prefer original sources (central banks, statistics agencies, company releases)
 and reputable outlets. Write everything in your own words: do not copy
 sentences from articles.
 
-Write the brief in Markdown with exactly these sections:
+Return ONLY a JSON object (no markdown, no code fences, no text before or
+after it) with exactly these keys:
 
-## 1. The numbers
-One or two sentences summarizing the overall tone (risk-on / risk-off, what led).
-Do not repeat the table; it is added separately.
+{{
+  "headline": "The day's biggest story in at most 9 words, like a news headline",
+  "mood": "One or two sentences on the overall tone (risk-on / risk-off, what led)",
+  "stories": [
+    {{"tag": "one of: Stocks, Rates, Energy, Commodities, FX, Macro, Earnings, Canada, Crypto",
+      "title": "One-line headline",
+      "why_happened": "One or two sentences",
+      "why_matters": "One or two sentences"}}
+  ],
+  "calendar": [
+    {{"time": "e.g. 8:30 AM ET, or 'Before open' / 'After close'",
+      "event": "What is scheduled",
+      "why": "Why it matters, max 15 words"}}
+  ],
+  "calendar_note": "If nothing major is scheduled, say so here; otherwise empty",
+  "canada": ["2-4 short points on the TSX, Canadian banks, energy, the Bank of Canada or the loonie"],
+  "takeaway": "1-2 sentences starting with 'If someone asks you about markets today:'",
+  "sources": [{{"title": "Page title", "url": "https://..."}}]
+}}
 
-## 2. What moved and why
-Up to 3 stories. For each: a bold one-line headline, then one line "Why it
-happened:" and one line "Why it matters:". Only stories that moved the numbers
-above or a major company or sector.
-
-## 3. What's coming today
-Bullet list of scheduled data releases, central bank events and major earnings
-for today, with times in ET where known. If nothing major, say so.
-
-## 4. Canada corner
-2-4 bullets on what is moving the TSX, Canadian banks, energy, the Bank of
-Canada or the loonie.
-
-## 5. The takeaway
-1-2 sentences starting with "If someone asks you about markets today:" that a
-student could say in an interview.
-
-Rules: under 550 words total, plain language, no hype, no buy/sell
-recommendations. Finish with a short "Sources" list of the pages you used.
+Rules: up to 3 stories, only ones that moved the numbers above or a major
+company or sector. Under 550 words of text in total, plain language, no hype,
+no buy/sell recommendations. Do not repeat the numbers table. Valid JSON only:
+double quotes, no trailing commas.
 """
 
 
@@ -264,6 +266,47 @@ def write_with_claude(table, today):
         raise RuntimeError(f"Claude API error {r.status_code}: {r.text[:500]}")
     blocks = r.json().get("content", [])
     return "".join(b.get("text", "") for b in blocks if b.get("type") == "text").strip()
+
+
+def parse_brief(text):
+    """Pull the JSON object out of Claude's reply. Returns a dict, or None."""
+    import json
+    if not text:
+        return None
+    t = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.M).strip()
+    i, j = t.find("{"), t.rfind("}")
+    if i < 0 or j <= i:
+        return None
+    try:
+        d = json.loads(t[i:j + 1])
+    except Exception:
+        return None
+    if not isinstance(d, dict) or not d.get("stories") and not d.get("mood"):
+        return None
+    d.setdefault("headline", "Today's markets")
+    for k in ("stories", "calendar", "canada", "sources"):
+        if not isinstance(d.get(k), list):
+            d[k] = []
+    return d
+
+
+def brief_markdown(d):
+    """Turn the structured brief into the Markdown used by the email and podcast."""
+    out = ["## 1. The numbers", d.get("mood", ""), "", "## 2. What moved and why"]
+    for st in d["stories"]:
+        out += [f"**{st.get('title','')}**", f"Why it happened: {st.get('why_happened','')}",
+                f"Why it matters: {st.get('why_matters','')}", ""]
+    out += ["## 3. What's coming today"]
+    for c in d["calendar"]:
+        out.append(f"- {c.get('time','')}: {c.get('event','')}. {c.get('why','')}".strip())
+    if d.get("calendar_note"):
+        out.append(d["calendar_note"])
+    out += ["", "## 4. Canada corner"] + [f"- {x}" for x in d["canada"]]
+    out += ["", "## 5. The takeaway", d.get("takeaway", "")]
+    if d["sources"]:
+        out += ["", "## Sources"] + [f"{i}. [{x.get('title','Source')}]({x.get('url','')})"
+                                      for i, x in enumerate(d["sources"], 1)]
+    return "\n".join(out)
 
 
 # ---------------------------------------------------------------------------
@@ -579,83 +622,292 @@ def send_email(subject, text, html_body=None, attachment=None):
 SITE_NAME = "Leveraged"
 KEEP_AUDIO_DAYS = 30  # older MP3s are deleted so the project doesn't get too big
 
+# Which numbers appear under each tab on the Today page
+MARKET_TABS = [
+    ("Stocks", ["S&P 500", "Nasdaq", "TSX", "VIX"]),
+    ("Rates", ["US 10Y yield", "Canada 10Y yield"]),
+    ("Commodities", ["WTI oil ($/bbl)", "Gold ($/oz)", "Natural gas ($/MMBtu)"]),
+    ("FX & crypto", ["USD/CAD", "US dollar index", "Bitcoin"]),
+]
+
 SITE_CSS = """
-*{box-sizing:border-box}
-body{margin:0;background:#F6F5F1;color:#12161C;font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;font-size:16px;line-height:1.5}
-a{color:#0F6B4F}
-.wrap{max-width:680px;margin:0 auto;padding:20px 16px 48px}
-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
-.brand{font-family:'Space Grotesk',Inter,sans-serif;font-weight:700;font-size:15px;letter-spacing:.3px}
-nav a{margin-left:14px;font-size:14px;font-weight:600;text-decoration:none;color:#5B6270;display:inline-block;padding:10px 0}
-nav a.on{color:#0F6B4F}
-h1{font-family:'Space Grotesk',Inter,sans-serif;font-size:30px;line-height:1.15;margin:8px 0 4px;letter-spacing:-.5px}
-.date{color:#5B6270;font-size:14px;font-weight:500;margin:0 0 18px}
-.note{background:#FFF4E5;color:#8A3B06;padding:8px 12px;border-radius:10px;font-size:13px;margin:0 0 14px}
-.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 16px}
-.tile{background:#fff;border:1px solid #E3E1DA;border-radius:14px;padding:10px 12px}
-.tile .n{font-size:12px;font-weight:600;color:#5B6270}
-.tile .v{font-size:17px;font-weight:700}
-.tile .c{font-size:13px;font-weight:700}
-.up{color:#0B6E4F}.down{color:#B54708}.na{color:#5B6270}
-.player{background:#12161C;color:#fff;border-radius:18px;padding:16px;margin:0 0 20px}
-.player .k{font-size:12px;color:#B9BEC7;font-weight:500}
-.player .t{font-size:17px;font-weight:600;margin:2px 0 10px}
-.player audio{width:100%}
-.card{background:#fff;border:1px solid #E3E1DA;border-radius:18px;padding:4px 18px 14px}
-.list a{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;background:#fff;border:1px solid #E3E1DA;border-radius:14px;margin:0 0 8px;text-decoration:none;color:#12161C;font-weight:600}
-.list span{color:#5B6270;font-weight:500;font-size:14px}
-footer{color:#5B6270;font-size:12px;margin-top:24px}
-@media (max-width:420px){.tile .v{font-size:15px}h1{font-size:26px}}
+:root{--bg:#F4F3EF;--card:#fff;--ink:#0E1116;--muted:#5B6270;--line:#E6E3DB;--g:#0F6B4F;--g2:#16A06F;--up:#0B6E4F;--down:#B54708;--upbg:#E3F3EC;--downbg:#FBEDE3}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:var(--g)}
+button{font:inherit;color:inherit}
+.wrap{max-width:640px;margin:0 auto;padding:14px 16px calc(110px + env(safe-area-inset-bottom))}
+.appbar{display:flex;justify-content:space-between;align-items:center;padding:6px 2px 14px}
+.brand{display:flex;align-items:center;gap:8px;font-family:'Space Grotesk',Inter,sans-serif;font-weight:700;font-size:17px;letter-spacing:-.2px}
+.logo{width:26px;height:26px;border-radius:8px;background:var(--ink);display:flex;align-items:center;justify-content:center}
+.datepill{font-size:13px;font-weight:600;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:6px 12px;border-radius:999px}
+.hero{background:var(--ink);color:#fff;border-radius:26px;padding:22px 20px 18px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-60px;top:-60px;width:180px;height:180px;border-radius:50%;border:1px solid rgba(255,255,255,.08)}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#8FD3B6}
+.hero h1{font-family:'Space Grotesk',Inter,sans-serif;font-size:28px;line-height:1.15;letter-spacing:-.6px;margin:8px 0 10px;font-weight:700}
+.hero .mood{color:#C4C9D2;font-size:15px;margin:0 0 18px}
+.player{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:12px;display:flex;align-items:center;gap:12px}
+.pbtn{width:52px;height:52px;border-radius:50%;border:0;background:var(--g2);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:transform .15s}
+.pbtn:active{transform:scale(.93)}
+.pmeta{flex:1;min-width:0}
+.ptitle{font-size:14px;font-weight:600;margin:0 0 6px}
+.bar{position:relative;height:6px;border-radius:999px;background:rgba(255,255,255,.15);cursor:pointer}
+.bar>div{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:#8FD3B6;width:0}
+.bar input{position:absolute;inset:-10px 0;width:100%;opacity:0;cursor:pointer;margin:0}
+.ptime{display:flex;justify-content:space-between;font-size:11px;color:#9AA1AC;margin-top:6px;font-variant-numeric:tabular-nums}
+.speed{min-width:52px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:transparent;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.noaudio{font-size:13px;color:#9AA1AC}
+.sec{margin:26px 0 0}
+.sech{display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 12px}
+.sech h2{font-family:'Space Grotesk',Inter,sans-serif;font-size:19px;letter-spacing:-.3px;margin:0}
+.sech span{font-size:13px;color:var(--muted)}
+.tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px;margin:0 0 12px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;min-height:40px;transition:all .2s}
+.tab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.panel[hidden]{display:none}
+.panel.show .tile{animation:rise .4s cubic-bezier(.2,.8,.2,1) backwards}
+.panel.show .tile:nth-child(2){animation-delay:.05s}.panel.show .tile:nth-child(3){animation-delay:.1s}.panel.show .tile:nth-child(4){animation-delay:.15s}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
+.tile .n{font-size:13px;font-weight:600;color:var(--muted)}
+.tile .v{font-family:'Space Grotesk',Inter,sans-serif;font-size:24px;font-weight:700;letter-spacing:-.5px;margin:4px 0 8px;font-variant-numeric:tabular-nums}
+.chg{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;padding:3px 8px;border-radius:999px}
+.chg.up{color:var(--up);background:var(--upbg)}.chg.down{color:var(--down);background:var(--downbg)}.chg.na{color:var(--muted);background:#EEECE6}
+.cards{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -16px;padding:2px 16px 6px}
+.cards::-webkit-scrollbar{display:none}
+.story{flex:0 0 86%;scroll-snap-align:start;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:10px;min-height:230px}
+.story .top{display:flex;justify-content:space-between;align-items:center}
+.tag{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--g);background:var(--upbg);padding:4px 9px;border-radius:999px}
+.count{font-size:12px;color:var(--muted);font-weight:600}
+.story h3{font-family:'Space Grotesk',Inter,sans-serif;font-size:20px;line-height:1.25;letter-spacing:-.3px;margin:2px 0 0}
+.story .lbl{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
+.story p{margin:0;font-size:15px}
+.more{margin-top:auto;align-self:flex-start;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;min-height:40px}
+.why{display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s ease}
+.why>div{overflow:hidden}
+.why.open{grid-template-rows:1fr}
+.dots{display:flex;justify-content:center;gap:6px;margin-top:10px}
+.dots span{width:7px;height:7px;border-radius:999px;background:#CFCBC0;transition:all .3s}
+.dots span.on{width:22px;background:var(--ink)}
+.timeline{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:6px 18px}
+.ev{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.ev:last-child{border-bottom:0}
+.ev .t{flex:0 0 78px;font-size:13px;font-weight:700;color:var(--g);font-variant-numeric:tabular-nums;padding-top:2px}
+.ev .e{font-weight:600;font-size:15px}.ev .w{font-size:13px;color:var(--muted)}
+.empty{color:var(--muted);font-size:15px;padding:14px 0}
+.canada{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px 18px}
+.canada ul{margin:0;padding:0;list-style:none}
+.canada li{position:relative;padding:8px 0 8px 18px;font-size:15px;border-bottom:1px solid var(--line)}
+.canada li:last-child{border-bottom:0}
+.canada li::before{content:"";position:absolute;left:0;top:17px;width:7px;height:7px;border-radius:50%;background:#C8102E}
+.line{background:var(--g);color:#fff;border-radius:24px;padding:20px}
+.line .eyebrow{color:#BFE8D6}
+.line blockquote{margin:10px 0 16px;font-family:'Space Grotesk',Inter,sans-serif;font-size:19px;line-height:1.35;letter-spacing:-.2px}
+.line .acts{display:flex;gap:10px}
+.lbtn{flex:1;min-height:46px;border-radius:14px;border:0;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.lbtn.a{background:#fff;color:var(--g)}.lbtn.b{background:rgba(255,255,255,.14);color:#fff}
+details.src{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:4px 18px}
+details.src summary{cursor:pointer;font-weight:600;font-size:14px;padding:12px 0;list-style:none;display:flex;justify-content:space-between}
+details.src summary::-webkit-details-marker{display:none}
+details.src summary::after{content:"+";font-size:18px;color:var(--muted)}
+details.src[open] summary::after{content:"−"}
+details.src ol{margin:0 0 12px;padding-left:20px;font-size:14px}
+details.src li{margin:0 0 6px}
+.note{background:#FFF4E5;color:#8A3B06;padding:8px 12px;border-radius:12px;font-size:13px;margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:6px 18px 14px}
+.list a{display:block;padding:16px 18px;background:var(--card);border:1px solid var(--line);border-radius:18px;margin:0 0 10px;text-decoration:none;color:var(--ink);transition:transform .15s}
+.list a:active{transform:scale(.99)}
+.list .d{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase}
+.list .h{font-family:'Space Grotesk',Inter,sans-serif;font-size:17px;font-weight:700;margin:4px 0 6px;letter-spacing:-.2px}
+.list .c{font-size:12px;font-weight:700;color:var(--g);background:var(--upbg);padding:3px 8px;border-radius:999px;margin-right:6px}
+h1.page{font-family:'Space Grotesk',Inter,sans-serif;font-size:30px;letter-spacing:-.6px;margin:4px 2px 16px}
+footer{color:var(--muted);font-size:12px;margin:26px 2px 0;text-align:center}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
+.tabbar .in{max-width:640px;margin:0 auto;display:flex;justify-content:space-around}
+.tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:72px;min-height:48px;justify-content:center;text-decoration:none;color:#7A808B;font-size:11px;font-weight:600}
+.tabbar a.on{color:var(--ink)}
+.tabbar a.on svg{color:var(--g)}
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1)}
+.reveal.in{opacity:1;transform:none}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+"""
+
+TAB_ICONS = {
+    "today": '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
+    "learn": '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/></svg>',
+    "archive": '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>',
+}
+
+SITE_JS = r"""
+(function(){
+  var rm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // reveal on scroll
+  var els = document.querySelectorAll('.reveal');
+  if (rm || !('IntersectionObserver' in window)) { els.forEach(function(e){e.classList.add('in')}); }
+  else { var io = new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}})},{threshold:.12});
+         els.forEach(function(e){io.observe(e)}); }
+  // market tabs
+  var tabs = document.querySelectorAll('.tab');
+  tabs.forEach(function(t){ t.addEventListener('click', function(){
+    tabs.forEach(function(o){ o.setAttribute('aria-selected','false'); var p=document.getElementById(o.getAttribute('aria-controls')); p.hidden=true; p.classList.remove('show'); });
+    t.setAttribute('aria-selected','true'); var p=document.getElementById(t.getAttribute('aria-controls')); p.hidden=false; void p.offsetWidth; p.classList.add('show');
+  }); });
+  // story cards: expand + dots
+  document.querySelectorAll('.more').forEach(function(b){ b.addEventListener('click', function(){
+    var w=document.getElementById(b.getAttribute('aria-controls')); var open=!w.classList.contains('open');
+    w.classList.toggle('open',open); b.setAttribute('aria-expanded',open?'true':'false'); b.textContent=open?'Show less':'Why it happened';
+  }); });
+  var cards=document.querySelector('.cards'), dots=document.querySelectorAll('.dots span');
+  if(cards && dots.length){ cards.addEventListener('scroll', function(){
+    var w=cards.firstElementChild.getBoundingClientRect().width+12; var i=Math.round(cards.scrollLeft/w);
+    dots.forEach(function(d,k){d.classList.toggle('on',k===i)});
+  }, {passive:true}); }
+  // copy interview line
+  var cp=document.getElementById('copyline');
+  if(cp){ cp.addEventListener('click', function(){ var t=document.getElementById('theline').innerText;
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){cp.textContent='Copied';setTimeout(function(){cp.textContent='Copy'},1600)}).catch(function(){}); }); }
+  // audio player
+  var a=document.getElementById('aud'); if(!a) return;
+  var btn=document.getElementById('pbtn'), fill=document.getElementById('pfill'), seek=document.getElementById('pseek'),
+      cur=document.getElementById('pcur'), dur=document.getElementById('pdur'), sp=document.getElementById('pspeed');
+  var PLAY='<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>',
+      PAUSE='<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+  function fmt(s){ if(!isFinite(s)) return '0:00'; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+  btn.addEventListener('click', function(){ if(a.paused){a.play()}else{a.pause()} });
+  a.addEventListener('play', function(){btn.innerHTML=PAUSE;btn.setAttribute('aria-label','Pause episode')});
+  a.addEventListener('pause', function(){btn.innerHTML=PLAY;btn.setAttribute('aria-label','Play episode')});
+  a.addEventListener('loadedmetadata', function(){dur.textContent=fmt(a.duration)});
+  a.addEventListener('timeupdate', function(){ var p=a.duration?a.currentTime/a.duration*100:0; fill.style.width=p+'%'; seek.value=p; cur.textContent=fmt(a.currentTime); });
+  seek.addEventListener('input', function(){ if(a.duration) a.currentTime=seek.value/100*a.duration; });
+  var speeds=[1,1.25,1.5,2], si=0;
+  sp.addEventListener('click', function(){ si=(si+1)%speeds.length; a.playbackRate=speeds[si]; sp.textContent=speeds[si]+'×'; });
+})();
 """
 
 
 def page(title, body, root, active):
-    def link(href, label, key):
+    def tab(href, label, key):
         cls = ' class="on" aria-current="page"' if key == active else ""
-        return f'<a href="{root}{href}"{cls}>{label}</a>'
+        return f'<a href="{root}{href}"{cls}>{TAB_ICONS[key]}{label}</a>'
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F4F3EF">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>{html.escape(title)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet">
 <style>{SITE_CSS}</style></head>
 <body><div class="wrap">
-<header><div class="brand">{SITE_NAME}</div>
-<nav aria-label="Main">{link("index.html", "Today", "today")}{link("learn.html", "Learn", "learn")}{link("archive.html", "Archive", "archive")}</nav></header>
+<div class="appbar"><div class="brand"><span class="logo" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8FD3B6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg></span>{SITE_NAME}</div>
+{{datepill}}</div>
 {body}
-<footer>For education only. Not investment advice. Some numbers may come from ETFs that track an index.</footer>
-</div></body></html>"""
+<footer>For education only. Not investment advice. Some numbers come from ETFs that track an index.</footer>
+</div>
+<nav class="tabbar" aria-label="Main"><div class="in">{tab("index.html", "Today", "today")}{tab("learn.html", "Learn", "learn")}{tab("archive.html", "Archive", "archive")}</div></nav>
+<script>{SITE_JS}</script>
+</body></html>"""
 
 
-def tiles_html(nums):
-    out = []
-    for name in ORDER:
-        d = nums.get(name)
-        if d is None:
-            out.append(f'<div class="tile"><div class="n">{html.escape(name)}</div>'
-                       f'<div class="v">n/a</div><div class="c na">n/a</div></div>')
-            continue
-        chg = fmt_change(d["value"], d["prev"], d["kind"])
-        cls = "up" if chg.startswith("▲") else "down"
-        out.append(f'<div class="tile"><div class="n">{html.escape(d.get("label", name))}</div>'
-                   f'<div class="v">{fmt_value(d["value"], d["kind"])}</div>'
-                   f'<div class="c {cls}">{chg}</div></div>')
-    return '<div class="tiles">' + "".join(out) + "</div>"
+def _chg(d):
+    if d is None:
+        return "n/a", '<span class="chg na">n/a</span>'
+    chg = fmt_change(d["value"], d["prev"], d["kind"])
+    cls = "up" if chg.startswith("▲") else "down"
+    return fmt_value(d["value"], d["kind"]), f'<span class="chg {cls}">{chg}</span>'
+
+
+def markets_html(nums):
+    tabs, panels = [], []
+    for i, (label, names) in enumerate(MARKET_TABS):
+        pid = f"mk{i}"
+        tabs.append(f'<button class="tab" type="button" role="tab" id="t{pid}" aria-controls="{pid}" '
+                    f'aria-selected="{"true" if i == 0 else "false"}">{label}</button>')
+        tiles = []
+        for name in names:
+            d = nums.get(name)
+            val, chip = _chg(d)
+            lab = (d or {}).get("label", name)
+            tiles.append(f'<div class="tile"><div class="n">{html.escape(lab)}</div>'
+                         f'<div class="v">{val}</div>{chip}</div>')
+        panels.append(f'<div class="panel{" show" if i == 0 else ""}" id="{pid}" role="tabpanel" '
+                      f'aria-labelledby="t{pid}"{"" if i == 0 else " hidden"}>{"".join(tiles)}</div>')
+    return (f'<section class="sec reveal" aria-label="Markets"><div class="sech"><h2>Markets</h2><span>At the close</span></div>'
+            f'<div class="tabs" role="tablist" aria-label="Market groups">{"".join(tabs)}</div>{"".join(panels)}</section>')
+
+
+def player_html(rec, root):
+    if not rec.get("audio"):
+        return '<div class="player"><span class="noaudio">No episode for this day.</span></div>'
+    return (f'<div class="player"><button class="pbtn" id="pbtn" type="button" aria-label="Play episode">'
+            f'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>'
+            f'<div class="pmeta"><div class="ptitle">Today\'s episode</div>'
+            f'<div class="bar"><div id="pfill"></div><input id="pseek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Seek"></div>'
+            f'<div class="ptime"><span id="pcur">0:00</span><span id="pdur">–:––</span></div></div>'
+            f'<button class="speed" id="pspeed" type="button" aria-label="Playback speed">1×</button>'
+            f'<audio id="aud" preload="metadata" src="{root}audio/{rec["audio"]}"></audio></div>')
 
 
 def day_body(rec, root):
+    e = html.escape
     note = '<p class="note">Sample numbers (demo mode), not real market data.</p>' if rec.get("demo") else ""
-    player = ""
-    if rec.get("audio"):
-        player = (f'<div class="player"><div class="k">Today\'s episode</div>'
-                  f'<div class="t">The Morning Brief podcast</div>'
-                  f'<audio controls preload="none" src="{root}audio/{rec["audio"]}"></audio></div>')
-    return (f'<h1>Today\'s brief</h1><p class="date">{html.escape(rec["today"])}</p>{note}'
-            f'{tiles_html(rec["nums"])}{player}<div class="card">{md_to_html(rec["written"])}</div>')
+    d = rec.get("data")
+    if not d:  # older days saved before the redesign
+        return (f'{note}<section class="hero"><div class="eyebrow">Morning brief</div><h1>Today\'s markets</h1>'
+                f'{player_html(rec, root)}</section>{markets_html(rec["nums"])}'
+                f'<section class="sec"><div class="card">{md_to_html(rec["written"])}</div></section>')
+
+    hero = (f'<section class="hero"><div class="eyebrow">Morning brief</div><h1>{e(d.get("headline", ""))}</h1>'
+            f'<p class="mood">{e(d.get("mood", ""))}</p>{player_html(rec, root)}</section>')
+
+    stories = d.get("stories", [])
+    cards = []
+    for i, st in enumerate(stories, 1):
+        cards.append(
+            f'<article class="story"><div class="top"><span class="tag">{e(st.get("tag", "Markets"))}</span>'
+            f'<span class="count">{i} of {len(stories)}</span></div>'
+            f'<h3>{e(st.get("title", ""))}</h3>'
+            f'<div><div class="lbl">Why it matters</div><p>{e(st.get("why_matters", ""))}</p></div>'
+            f'<div class="why" id="why{i}"><div><div class="lbl">Why it happened</div><p>{e(st.get("why_happened", ""))}</p></div></div>'
+            f'<button class="more" type="button" aria-expanded="false" aria-controls="why{i}">Why it happened</button></article>')
+    dots = "".join(f'<span class="{"on" if i == 0 else ""}"></span>' for i in range(len(stories))) if len(stories) > 1 else ""
+    moved = (f'<section class="sec reveal" aria-label="What moved"><div class="sech"><h2>What moved</h2>'
+             f'<span>{"Swipe" if len(stories) > 1 else ""}</span></div><div class="cards">{"".join(cards)}</div>'
+             f'<div class="dots" aria-hidden="true">{dots}</div></section>') if stories else ""
+
+    evs = "".join(f'<div class="ev"><div class="t">{e(c.get("time", ""))}</div><div><div class="e">{e(c.get("event", ""))}</div>'
+                  f'<div class="w">{e(c.get("why", ""))}</div></div></div>' for c in d.get("calendar", []))
+    if not evs:
+        evs = f'<div class="empty">{e(d.get("calendar_note") or "Nothing major on the calendar today.")}</div>'
+    coming = f'<section class="sec reveal" aria-label="Coming up"><div class="sech"><h2>Coming up today</h2></div><div class="timeline">{evs}</div></section>'
+
+    can = "".join(f"<li>{e(x)}</li>" for x in d.get("canada", []))
+    canada = (f'<section class="sec reveal" aria-label="Canada desk"><div class="sech"><h2>Canada desk</h2></div>'
+              f'<div class="canada"><ul>{can}</ul></div></section>') if can else ""
+
+    take = d.get("takeaway", "")
+    take_clean = re.sub(r"^\s*If someone asks you about markets today:\s*", "", take, flags=re.I)
+    take_clean = take_clean[:1].upper() + take_clean[1:]
+    line = (f'<section class="sec reveal" aria-label="Your interview line"><div class="line"><div class="eyebrow">Your interview line</div>'
+            f'<blockquote id="theline">{e(take_clean)}</blockquote><div class="acts">'
+            f'<button class="lbtn a" type="button" id="copyline">Copy</button>'
+            f'<a class="lbtn b" href="{root}learn.html">Practice in Learn</a></div></div></section>') if take else ""
+
+    srcs = "".join(f'<li><a href="{e(x.get("url", ""))}" rel="noopener" target="_blank">{e(x.get("title") or "Source")}</a></li>'
+                   for x in d.get("sources", []) if str(x.get("url", "")).startswith("http"))
+    sources = f'<details class="src"><summary>Sources ({len(d.get("sources", []))})</summary><ol>{srcs}</ol></details>' if srcs else ""
+
+    return note + hero + markets_html(rec["nums"]) + moved + coming + canada + line + sources
 
 
-def build_site(site_dir, iso, today, nums, written, mp3, demo):
+def short_date(iso):
+    return dt.date.fromisoformat(iso).strftime("%a, %b %-d")
+
+
+def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
     import json
     import shutil
     days = site_dir / "days"
@@ -670,16 +922,17 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo):
         shutil.copyfile(mp3, audio / audio_name)
 
     rec = {"iso": iso, "today": today, "nums": nums, "written": written,
-           "audio": audio_name, "demo": demo}
+           "audio": audio_name, "demo": demo, "data": data}
     (days / f"{iso}.json").write_text(json.dumps(rec), encoding="utf-8")
 
-    # Delete old audio so the project stays small
     cutoff = (dt.date.fromisoformat(iso) - dt.timedelta(days=KEEP_AUDIO_DAYS)).isoformat()
     for f in audio.glob("*.mp3"):
         if f.stem < cutoff:
             f.unlink()
 
-    # Rebuild every day page, the home page and the archive
+    def pill(text):
+        return f'<span class="datepill">{html.escape(text)}</span>'
+
     records = []
     for f in sorted(days.glob("*.json"), reverse=True):
         r = json.loads(f.read_text(encoding="utf-8"))
@@ -687,19 +940,23 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo):
             r["audio"] = None
         records.append(r)
         (days / f"{r['iso']}.html").write_text(
-            page(f"{SITE_NAME}: {r['today']}", day_body(r, "../"), "../", "day"), encoding="utf-8")
+            page(f"{SITE_NAME}: {r['today']}", day_body(r, "../"), "../", "archive")
+            .replace("{datepill}", pill(short_date(r["iso"]))), encoding="utf-8")
 
     latest = records[0]
     (site_dir / "index.html").write_text(
-        page(SITE_NAME, day_body(latest, ""), "", "today"), encoding="utf-8")
+        page(SITE_NAME, day_body(latest, ""), "", "today").replace("{datepill}", pill(short_date(latest["iso"]))),
+        encoding="utf-8")
 
-    items = "".join(
-        f'<a href="days/{r["iso"]}.html">{html.escape(r["today"])}'
-        f'<span>{"Brief + podcast" if r.get("audio") else "Brief"}</span></a>' for r in records)
+    items = []
+    for r in records:
+        head = (r.get("data") or {}).get("headline") or "Morning brief"
+        chips = '<span class="c">Podcast</span>' if r.get("audio") else ""
+        items.append(f'<a href="days/{r["iso"]}.html"><div class="d">{html.escape(short_date(r["iso"]))}</div>'
+                     f'<div class="h">{html.escape(head)}</div>{chips}</a>')
     (site_dir / "archive.html").write_text(
-        page(f"{SITE_NAME}: Archive",
-             f'<h1>Archive</h1><p class="date">Every past brief</p><div class="list">{items}</div>',
-             "", "archive"), encoding="utf-8")
+        page(f"{SITE_NAME}: Archive", f'<h1 class="page">Archive</h1><div class="list">{"".join(items)}</div>',
+             "", "archive").replace("{datepill}", pill(f"{len(records)} days")), encoding="utf-8")
     print(f"  website updated ({len(records)} days)")
 
 
@@ -722,7 +979,12 @@ def main():
     except Exception as e:
         print(f"  ! {e}", file=sys.stderr)
         written = None
-    if written is None:
+    data = parse_brief(written)
+    if data:
+        written = brief_markdown(data)
+    elif written:
+        print("  ! brief was not in the expected JSON format; using it as plain text", file=sys.stderr)
+    else:
         written = ("_AI sections not generated. Set ANTHROPIC_API_KEY to have Claude "
                    "write sections 1-5._")
 
@@ -747,7 +1009,7 @@ def main():
     if not args.demo or args.site:
         site_dir = Path(os.getenv("SITE_DIR") or Path(__file__).parent / "docs")
         try:
-            build_site(site_dir, dt.date.today().isoformat(), today, nums, written, mp3, args.demo)
+            build_site(site_dir, dt.date.today().isoformat(), today, nums, written, mp3, args.demo, data)
         except Exception as e:
             print(f"  ! website: {e}", file=sys.stderr)
 
