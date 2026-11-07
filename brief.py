@@ -269,28 +269,51 @@ def write_with_claude(table, today):
 # ---------------------------------------------------------------------------
 # 4b. THE PODCAST (needs OPENAI_API_KEY; skipped if it's not set)
 # ---------------------------------------------------------------------------
-HOSTS = {  # host name -> OpenAI voice
-    "ALEX": os.getenv("VOICE_ALEX", "onyx"),
-    "SAM": os.getenv("VOICE_SAM", "nova"),
+HOSTS = {  # host name -> OpenAI voice (expressive voices for gpt-4o-mini-tts)
+    "ALEX": os.getenv("VOICE_ALEX", "ash"),
+    "SAM": os.getenv("VOICE_SAM", "coral"),
 }
+FALLBACK_VOICES = {"ALEX": "onyx", "SAM": "nova"}  # used only if the newer model fails
 TTS_MODEL = os.getenv("TTS_MODEL", "gpt-4o-mini-tts")
 
-PODCAST_PROMPT = """Turn this morning market brief into a script for a two-host daily
-podcast called "The Morning Brief". Hosts: ALEX and SAM. Audience: finance
-students and young professionals in Canada recruiting for IB, consulting and
-equity research.
+# Acting directions for each host (how they should sound, not what they say)
+HOST_STYLE = {
+    "ALEX": ("You are ALEX, co-host of an upbeat morning markets podcast. Energetic, "
+             "confident and a little playful, like a friend who loves markets and just had "
+             "a great coffee. Smile while you talk. Vary your pitch, lean into key numbers "
+             "and surprising moves, and keep a brisk, lively pace. Never sound flat or like "
+             "you're reading."),
+    "SAM": ("You are SAM, co-host of an upbeat morning markets podcast. Warm, curious and "
+            "expressive. React with real feeling: surprise, amusement, 'oh, that's "
+            "interesting'. Smile while you talk, vary your pitch and keep a lively, "
+            "conversational pace. Never sound flat or like you're reading."),
+}
 
-Rules:
-- About 1,100 words (7-8 minutes). Natural, friendly conversation, like two
-  smart friends, not a news anchor. Short sentences that are easy to say.
-- Cover, in order: a quick open with the date, the market numbers that moved
-  most (say numbers the way people speak, e.g. "down about three percent"),
-  what moved and why, what's coming today, the Canada corner, and close with
-  "the interview angle": one thing listeners could say if asked about markets.
+PODCAST_PROMPT = """Turn this morning market brief into a script for a two-host daily
+podcast called "The Morning Brief". Hosts: ALEX (the energetic one who drives
+the show) and SAM (the curious one who asks the questions listeners are
+thinking). Audience: finance students and young professionals in Canada
+recruiting for IB, consulting and equity research.
+
+Make it sound like two friends who love this stuff, not a news report:
+- About 1,100 words (7-8 minutes). Short turns: most lines one to three
+  sentences, and switch speakers often.
+- Real back-and-forth. Hosts react to each other ("Wait, really?", "Okay, that's
+  wild", "Right, and here's the part people miss..."), ask each other quick
+  questions, and finish each other's thoughts. Light humour is good.
+- Open with energy: a quick hello, the date, and a one-line teaser of the
+  biggest story.
+- Then cover, in order: the market numbers that moved most (say numbers the way
+  people speak, e.g. "down about three percent"), what moved and why, what's
+  coming today, the Canada corner, and close with "the interview angle": one
+  thing listeners could say if asked about markets.
+- Use contractions and everyday words. Vary sentence length. Use an
+  exclamation mark now and then where a host would actually be excited.
 - Use only facts and numbers from the brief. Do not add new facts.
 - No sound effects, stage directions, music cues or markdown.
 - Every line must start with "ALEX:" or "SAM:". Nothing else in the output.
-- End with a one-line reminder that this is for education, not investment advice.
+- End with a quick, friendly sign-off and a one-line reminder that this is for
+  education, not investment advice.
 
 THE BRIEF:
 {brief}
@@ -322,18 +345,27 @@ def parse_script(script):
     return lines
 
 
-def tts(text, voice, key):
-    body = {"model": TTS_MODEL, "voice": voice, "input": text[:4000], "response_format": "mp3"}
-    if TTS_MODEL != "tts-1":
-        body["instructions"] = "Warm, upbeat, conversational podcast host. Natural pace."
-    r = requests.post("https://api.openai.com/v1/audio/speech",
-                      headers={"Authorization": f"Bearer {key}"}, json=body, timeout=120)
-    if r.status_code != 200 and TTS_MODEL != "tts-1":
-        body = {"model": "tts-1", "voice": voice, "input": text[:4000], "response_format": "mp3"}
-        r = requests.post("https://api.openai.com/v1/audio/speech",
-                          headers={"Authorization": f"Bearer {key}"}, json=body, timeout=120)
+TTS_STATS = {"main": 0, "fallback": 0}
+
+
+def tts(text, who, key):
+    headers = {"Authorization": f"Bearer {key}"}
+    body = {"model": TTS_MODEL, "voice": HOSTS[who], "input": text[:4000],
+            "response_format": "mp3", "instructions": HOST_STYLE[who]}
+    r = requests.post("https://api.openai.com/v1/audio/speech", headers=headers,
+                      json=body, timeout=120)
+    if r.status_code == 200:
+        TTS_STATS["main"] += 1
+        return r.content
+    # Fallback: older, flatter model with classic voices
+    print(f"  ! {TTS_MODEL} failed ({r.status_code}): {r.text[:200]}", file=sys.stderr)
+    body = {"model": "tts-1", "voice": FALLBACK_VOICES[who], "input": text[:4000],
+            "response_format": "mp3", "speed": 1.08}
+    r = requests.post("https://api.openai.com/v1/audio/speech", headers=headers,
+                      json=body, timeout=120)
     if r.status_code != 200:
         raise RuntimeError(f"OpenAI TTS error {r.status_code}: {r.text[:300]}")
+    TTS_STATS["fallback"] += 1
     return r.content
 
 
@@ -349,7 +381,9 @@ def make_podcast(brief, out_dir, stem):
         if not lines:
             raise RuntimeError("script had no ALEX:/SAM: lines")
         (out_dir / f"{stem}-script.txt").write_text(script, encoding="utf-8")
-        audio = b"".join(tts(text, HOSTS[who], key) for who, text in lines)
+        audio = b"".join(tts(text, who, key) for who, text in lines)
+        print(f"  voices: {TTS_STATS['main']} lines on {TTS_MODEL}, "
+              f"{TTS_STATS['fallback']} on the older fallback model")
         mp3 = out_dir / f"{stem}-podcast.mp3"
         mp3.write_bytes(audio)
         print(f"  podcast saved {mp3} ({len(lines)} lines, {len(audio)//1024} KB)")
