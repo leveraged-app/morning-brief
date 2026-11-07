@@ -219,45 +219,38 @@ Prefer original sources (central banks, statistics agencies, company releases)
 and reputable outlets. Write everything in your own words: do not copy
 sentences from articles.
 
-Return ONLY a JSON object (no markdown, no code fences, no text before or
-after it) with exactly these keys:
+Write the brief in plain Markdown with exactly these sections:
 
-{{
-  "headline": "The day's biggest story in at most 9 words, like a news headline",
-  "mood": "One or two sentences on the overall tone (risk-on / risk-off, what led)",
-  "stories": [
-    {{"tag": "one of: Stocks, Rates, Energy, Commodities, FX, Macro, Earnings, Canada, Crypto",
-      "title": "One-line headline",
-      "why_happened": "One or two sentences",
-      "why_matters": "One or two sentences"}}
-  ],
-  "calendar": [
-    {{"time": "e.g. 8:30 AM ET, or 'Before open' / 'After close'",
-      "event": "What is scheduled",
-      "why": "Why it matters, max 15 words"}}
-  ],
-  "calendar_note": "If nothing major is scheduled, say so here; otherwise empty",
-  "deals": [
-    {{"type": "Acquisition, Merger, IPO or Financing",
-      "buyer": "Acquirer or issuer",
-      "target": "Company being bought (empty for IPOs/financings)",
-      "value": "Deal size as reported, e.g. US$2.1B, or 'Undisclosed'",
-      "why": "One or two sentences: the strategic logic and what it signals"}}
-  ],
-  "canada": ["2-4 short points on the TSX, Canadian banks, energy, the Bank of Canada or the loonie"],
-  "takeaway": "1-2 sentences starting with 'If someone asks you about markets today:'",
-  "sources": [{{"title": "Page title", "url": "https://..."}}]
-}}
+## Headline
+The day's biggest story in at most 9 words.
 
-Keep every field concise: one or two sentences each. Don't comment on data
-timing or sources inside the text. Plain text only inside the JSON: no citation
-tags, no HTML, no markdown. Put links only in "sources".
+## Mood
+One or two sentences on the overall tone (risk-on / risk-off, what led).
 
-Rules: up to 3 stories, only ones that moved the numbers above or a major
-company or sector. Up to 3 deals, only ones you found in your searches with a
-source; use an empty list if there are none. Under 550 words of text in total, plain language, no hype,
-no buy/sell recommendations. Do not repeat the numbers table. Valid JSON only:
-double quotes, no trailing commas.
+## What moved and why
+Up to 3 stories. For each: a bold one-line title, a tag in brackets (one of
+Stocks, Rates, Energy, Commodities, FX, Macro, Earnings, Canada, Crypto), then
+"Why it happened:" and "Why it matters:" lines, one or two sentences each.
+
+## Deals
+Up to 3 notable M&A or capital markets deals from the last few days: type,
+buyer, target, deal size, and one or two sentences on the logic. Write "None"
+if you found none.
+
+## What's coming today
+Bullets: time (ET where known), the event, and why it matters in a few words.
+
+## Canada corner
+2-4 short bullets.
+
+## The takeaway
+1-2 sentences starting with "If someone asks you about markets today:".
+
+## Sources
+A numbered list of the pages you used, as Markdown links.
+
+Rules: under 550 words in total, plain language, no hype, no buy/sell
+recommendations. Do not repeat the numbers table. Don't comment on data timing.
 """
 
 
@@ -329,6 +322,66 @@ def parse_brief(text):
 
 def looks_like_json(text):
     return bool(text) and "{" in text and ('"headline"' in text or '"stories"' in text)
+
+
+BRIEF_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "headline": {"type": "string"},
+        "mood": {"type": "string"},
+        "stories": {"type": "array", "items": {"type": "object", "properties": {
+            "tag": {"type": "string"}, "title": {"type": "string"},
+            "why_happened": {"type": "string"}, "why_matters": {"type": "string"}},
+            "required": ["title", "why_matters"]}},
+        "deals": {"type": "array", "items": {"type": "object", "properties": {
+            "type": {"type": "string"}, "buyer": {"type": "string"}, "target": {"type": "string"},
+            "value": {"type": "string"}, "why": {"type": "string"}}, "required": ["buyer"]}},
+        "calendar": {"type": "array", "items": {"type": "object", "properties": {
+            "time": {"type": "string"}, "event": {"type": "string"}, "why": {"type": "string"}},
+            "required": ["event"]}},
+        "calendar_note": {"type": "string"},
+        "canada": {"type": "array", "items": {"type": "string"}},
+        "takeaway": {"type": "string"},
+        "sources": {"type": "array", "items": {"type": "object", "properties": {
+            "title": {"type": "string"}, "url": {"type": "string"}}}},
+    },
+    "required": ["headline", "mood", "stories", "takeaway"],
+}
+
+
+def structure_brief(md):
+    """Second step: turn the written brief into the app's format.
+    A forced tool call means the reply always comes back as a valid object."""
+    key = os.getenv("ANTHROPIC_API_KEY")
+    if not key or not md:
+        return None
+    body = {
+        "model": MODEL, "max_tokens": 4000,
+        "tools": [{"name": "publish_brief",
+                   "description": "Publish the morning brief to the app.",
+                   "input_schema": BRIEF_SCHEMA}],
+        "tool_choice": {"type": "tool", "name": "publish_brief"},
+        "messages": [{"role": "user", "content":
+            "Copy this market brief into the publish_brief tool. Keep the wording and facts; "
+            "don't add anything. Use plain text only (no citation tags, HTML or markdown). "
+            "Leave deals empty if the brief says none. If nothing is scheduled today, leave "
+            "calendar empty and say so in calendar_note.\n\n" + CITE_RE.sub("", md)}],
+    }
+    r = requests.post("https://api.anthropic.com/v1/messages",
+                      headers={"x-api-key": key, "anthropic-version": "2023-06-01",
+                               "content-type": "application/json"},
+                      json=body, timeout=180)
+    if r.status_code != 200:
+        raise RuntimeError(f"Claude API error {r.status_code}: {r.text[:300]}")
+    for blk in r.json().get("content", []):
+        if blk.get("type") == "tool_use":
+            d = clean_text(blk.get("input") or {})
+            d.setdefault("headline", "Today's markets")
+            for k in ("stories", "calendar", "canada", "sources", "deals"):
+                if not isinstance(d.get(k), list):
+                    d[k] = []
+            return d
+    return None
 
 
 def brief_markdown(d):
@@ -912,7 +965,9 @@ def player_html(rec, root):
 def day_body(rec, root):
     e = html.escape
     note = '<p class="note">Sample numbers (demo mode), not real market data.</p>' if rec.get("demo") else ""
-    d = rec.get("data")
+    d = rec.get("data") or parse_brief(rec.get("written", ""))
+    if not d and looks_like_json(rec.get("written", "")):
+        rec = dict(rec, written="_This day's written brief couldn't be formatted._")
     if not d:  # older days saved before the redesign
         return (f'{note}<section class="hero"><div class="eyebrow">Morning brief</div><h1>Today\'s markets</h1>'
                 f'{player_html(rec, root)}</section>{markets_html(rec["nums"])}'
@@ -1027,7 +1082,7 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
     print(f"  website updated ({len(records)} days)")
 
 
-BRIEF_VERSION = "2026-11-07d"
+BRIEF_VERSION = "2026-11-07e"
 
 
 def main():
@@ -1050,23 +1105,21 @@ def main():
     except Exception as e:
         print(f"  ! {e}", file=sys.stderr)
         written = None
-    data = parse_brief(written)
-    if written and not data and os.getenv("ANTHROPIC_API_KEY"):
-        print("  brief JSON didn't parse; asking Claude to repair it...")
+    data = None
+    if written:
+        written = CITE_RE.sub("", written)
+        print("Formatting brief for the app...")
         try:
-            fixed = claude_plain(
-                "The text below was meant to be one JSON object for a market brief but it is "
-                "invalid or cut off. Return ONLY the corrected, complete JSON object with the same "
-                "keys (headline, mood, stories, deals, calendar, calendar_note, canada, takeaway, "
-                "sources). Keep all the facts as written. If a field is cut off, finish it briefly "
-                "or leave it empty. Do not add new facts.\n\n" + written, max_tokens=6000)
-            data = parse_brief(fixed)
+            data = structure_brief(written)
         except Exception as e:
-            print(f"  ! repair failed: {e}", file=sys.stderr)
+            print(f"  ! formatting step failed: {e}", file=sys.stderr)
+        if not data:
+            data = parse_brief(written)  # in case the reply was already structured
     if data:
         written = brief_markdown(data)
+        print(f"  formatted OK: {len(data['stories'])} stories, {len(data['deals'])} deals")
     elif written:
-        print("  ! brief was not in the expected JSON format; using it as plain text", file=sys.stderr)
+        print("  ! couldn't format the brief; the site will show it as plain text", file=sys.stderr)
         if looks_like_json(written):
             written = "_Today's written brief couldn't be formatted. The numbers and podcast above are still current._"
     else:
