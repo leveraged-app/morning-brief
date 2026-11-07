@@ -267,6 +267,99 @@ def write_with_claude(table, today):
 
 
 # ---------------------------------------------------------------------------
+# 4b. THE PODCAST (needs OPENAI_API_KEY; skipped if it's not set)
+# ---------------------------------------------------------------------------
+HOSTS = {  # host name -> OpenAI voice
+    "ALEX": os.getenv("VOICE_ALEX", "onyx"),
+    "SAM": os.getenv("VOICE_SAM", "nova"),
+}
+TTS_MODEL = os.getenv("TTS_MODEL", "gpt-4o-mini-tts")
+
+PODCAST_PROMPT = """Turn this morning market brief into a script for a two-host daily
+podcast called "The Morning Brief". Hosts: ALEX and SAM. Audience: finance
+students and young professionals in Canada recruiting for IB, consulting and
+equity research.
+
+Rules:
+- About 1,100 words (7-8 minutes). Natural, friendly conversation, like two
+  smart friends, not a news anchor. Short sentences that are easy to say.
+- Cover, in order: a quick open with the date, the market numbers that moved
+  most (say numbers the way people speak, e.g. "down about three percent"),
+  what moved and why, what's coming today, the Canada corner, and close with
+  "the interview angle": one thing listeners could say if asked about markets.
+- Use only facts and numbers from the brief. Do not add new facts.
+- No sound effects, stage directions, music cues or markdown.
+- Every line must start with "ALEX:" or "SAM:". Nothing else in the output.
+- End with a one-line reminder that this is for education, not investment advice.
+
+THE BRIEF:
+{brief}
+"""
+
+
+def claude_plain(prompt, max_tokens=3000):
+    key = os.getenv("ANTHROPIC_API_KEY")
+    r = requests.post(
+        "https://api.anthropic.com/v1/messages",
+        headers={"x-api-key": key, "anthropic-version": "2023-06-01",
+                 "content-type": "application/json"},
+        json={"model": MODEL, "max_tokens": max_tokens,
+              "messages": [{"role": "user", "content": prompt}]},
+        timeout=180,
+    )
+    if r.status_code != 200:
+        raise RuntimeError(f"Claude API error {r.status_code}: {r.text[:500]}")
+    return "".join(b.get("text", "") for b in r.json().get("content", [])
+                   if b.get("type") == "text").strip()
+
+
+def parse_script(script):
+    lines = []
+    for raw in script.splitlines():
+        m = re.match(r"^\s*\**\s*(ALEX|SAM)\s*\**\s*:\s*(.+)$", raw.strip(), re.I)
+        if m:
+            lines.append((m.group(1).upper(), m.group(2).strip()))
+    return lines
+
+
+def tts(text, voice, key):
+    body = {"model": TTS_MODEL, "voice": voice, "input": text[:4000], "response_format": "mp3"}
+    if TTS_MODEL != "tts-1":
+        body["instructions"] = "Warm, upbeat, conversational podcast host. Natural pace."
+    r = requests.post("https://api.openai.com/v1/audio/speech",
+                      headers={"Authorization": f"Bearer {key}"}, json=body, timeout=120)
+    if r.status_code != 200 and TTS_MODEL != "tts-1":
+        body = {"model": "tts-1", "voice": voice, "input": text[:4000], "response_format": "mp3"}
+        r = requests.post("https://api.openai.com/v1/audio/speech",
+                          headers={"Authorization": f"Bearer {key}"}, json=body, timeout=120)
+    if r.status_code != 200:
+        raise RuntimeError(f"OpenAI TTS error {r.status_code}: {r.text[:300]}")
+    return r.content
+
+
+def make_podcast(brief, out_dir, stem):
+    """Returns the path to the MP3, or None if skipped/failed."""
+    key = os.getenv("OPENAI_API_KEY")
+    if not key or not os.getenv("ANTHROPIC_API_KEY"):
+        print("  (podcast skipped: needs OPENAI_API_KEY and ANTHROPIC_API_KEY)")
+        return None
+    try:
+        script = claude_plain(PODCAST_PROMPT.format(brief=brief))
+        lines = parse_script(script)
+        if not lines:
+            raise RuntimeError("script had no ALEX:/SAM: lines")
+        (out_dir / f"{stem}-script.txt").write_text(script, encoding="utf-8")
+        audio = b"".join(tts(text, HOSTS[who], key) for who, text in lines)
+        mp3 = out_dir / f"{stem}-podcast.mp3"
+        mp3.write_bytes(audio)
+        print(f"  podcast saved {mp3} ({len(lines)} lines, {len(audio)//1024} KB)")
+        return mp3
+    except Exception as e:
+        print(f"  ! podcast: {e}", file=sys.stderr)
+        return None
+
+
+# ---------------------------------------------------------------------------
 # 5. SAVING AND EMAILING
 # ---------------------------------------------------------------------------
 UP, DOWN, INK, GREY, LINE = "#0B6E4F", "#B54708", "#12161C", "#5B6270", "#E3E1DA"
@@ -365,7 +458,7 @@ def build_html(today, nums, written, demo):
 </div></div></body></html>"""
 
 
-def send_email(subject, text, html_body=None):
+def send_email(subject, text, html_body=None, attachment=None):
     user = os.getenv("GMAIL_ADDRESS")
     pw = os.getenv("GMAIL_APP_PASSWORD")
     to = os.getenv("BRIEF_TO") or user
@@ -379,6 +472,9 @@ def send_email(subject, text, html_body=None):
     msg.set_content(text)
     if html_body:
         msg.add_alternative(html_body, subtype="html")
+    if attachment:
+        msg.add_attachment(Path(attachment).read_bytes(), maintype="audio",
+                           subtype="mpeg", filename=Path(attachment).name)
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context()) as s:
         s.login(user, pw)
         s.send_message(msg)
@@ -389,6 +485,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--demo", action="store_true", help="use sample numbers")
     ap.add_argument("--no-email", action="store_true")
+    ap.add_argument("--no-podcast", action="store_true")
     args = ap.parse_args()
 
     today = dt.date.today().strftime("%A, %B %d, %Y")
@@ -419,8 +516,13 @@ def main():
     html_body = build_html(today, nums, written, args.demo)
     (out_dir / path.name.replace(".md", ".html")).write_text(html_body, encoding="utf-8")
 
+    mp3 = None
+    if not args.no_podcast:
+        print("Making podcast...")
+        mp3 = make_podcast(brief, out_dir, path.stem)
+
     if not args.no_email:
-        send_email(f"Morning Brief: {today}", brief, html_body)
+        send_email(f"Morning Brief: {today}", brief, html_body, mp3)
 
 
 if __name__ == "__main__":
