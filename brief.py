@@ -212,6 +212,9 @@ Here are the latest closing numbers (use them exactly; never invent or change a 
 
 Use web search to find out WHY the biggest moves happened and WHAT is scheduled
 for today (economic data, Fed / Bank of Canada events, major earnings).
+Also search for notable M&A and capital markets deals (acquisitions, mergers,
+IPOs, big financings) announced in the last few days, especially Canadian deals
+or very large global ones.
 Prefer original sources (central banks, statistics agencies, company releases)
 and reputable outlets. Write everything in your own words: do not copy
 sentences from articles.
@@ -234,13 +237,21 @@ after it) with exactly these keys:
       "why": "Why it matters, max 15 words"}}
   ],
   "calendar_note": "If nothing major is scheduled, say so here; otherwise empty",
+  "deals": [
+    {{"type": "Acquisition, Merger, IPO or Financing",
+      "buyer": "Acquirer or issuer",
+      "target": "Company being bought (empty for IPOs/financings)",
+      "value": "Deal size as reported, e.g. US$2.1B, or 'Undisclosed'",
+      "why": "One or two sentences: the strategic logic and what it signals"}}
+  ],
   "canada": ["2-4 short points on the TSX, Canadian banks, energy, the Bank of Canada or the loonie"],
   "takeaway": "1-2 sentences starting with 'If someone asks you about markets today:'",
   "sources": [{{"title": "Page title", "url": "https://..."}}]
 }}
 
 Rules: up to 3 stories, only ones that moved the numbers above or a major
-company or sector. Under 550 words of text in total, plain language, no hype,
+company or sector. Up to 3 deals, only ones you found in your searches with a
+source; use an empty list if there are none. Under 550 words of text in total, plain language, no hype,
 no buy/sell recommendations. Do not repeat the numbers table. Valid JSON only:
 double quotes, no trailing commas.
 """
@@ -284,7 +295,7 @@ def parse_brief(text):
     if not isinstance(d, dict) or not d.get("stories") and not d.get("mood"):
         return None
     d.setdefault("headline", "Today's markets")
-    for k in ("stories", "calendar", "canada", "sources"):
+    for k in ("stories", "calendar", "canada", "sources", "deals"):
         if not isinstance(d.get(k), list):
             d[k] = []
     return d
@@ -296,6 +307,14 @@ def brief_markdown(d):
     for st in d["stories"]:
         out += [f"**{st.get('title','')}**", f"Why it happened: {st.get('why_happened','')}",
                 f"Why it matters: {st.get('why_matters','')}", ""]
+    if d["deals"]:
+        out += ["## Deals"]
+        for x in d["deals"]:
+            who = x.get("buyer", "")
+            if x.get("target"):
+                who += f" → {x['target']}"
+            out += [f"- **{x.get('type', 'Deal')}: {who}** ({x.get('value', 'Undisclosed')}). {x.get('why', '')}"]
+        out.append("")
     out += ["## 3. What's coming today"]
     for c in d["calendar"]:
         out.append(f"- {c.get('time','')}: {c.get('event','')}. {c.get('why','')}".strip())
@@ -312,70 +331,71 @@ def brief_markdown(d):
 # ---------------------------------------------------------------------------
 # 4b. THE PODCAST (needs OPENAI_API_KEY; skipped if it's not set)
 # ---------------------------------------------------------------------------
-HOSTS = {  # host name -> OpenAI voice. Both male, picked to sound clearly different.
+HOSTS = {  # one host. "ash" was the deeper of the two voices.
     "ALEX": os.getenv("VOICE_ALEX", "ash"),
-    "SAM": os.getenv("VOICE_SAM", "verse"),
 }
-FALLBACK_VOICES = {"ALEX": "onyx", "SAM": "echo"}  # used only if the newer model fails
+FALLBACK_VOICES = {"ALEX": "onyx"}  # used only if the newer model fails
 TTS_MODEL = os.getenv("TTS_MODEL", "gpt-4o-mini-tts")
 # Speeds up the finished episode without changing pitch (1.0 = normal, 1.2 = 20% faster)
 PODCAST_SPEED = float(os.getenv("PODCAST_SPEED", "1.18"))
 
-# Acting directions for each host (how they should sound, not what they say)
+# Acting direction for the host (how he should sound, not what he says)
 HOST_STYLE = {
-    "ALEX": ("You are ALEX, a male host of a daily markets podcast. You sound like someone "
-             "who works on a trading floor and is walking a friend through the morning: "
-             "confident, relaxed, engaged. Natural, conversational delivery with a brisk pace "
-             "and no long pauses. Emphasize the numbers that matter. Don't oversell or sound "
-             "like an announcer, and never sound flat or like you're reading."),
-    "SAM": ("You are SAM, a male co-host of a daily markets podcast. Thoughtful and curious, "
-            "with a calm, warm voice. You talk like a sharp analyst having a real "
-            "conversation: natural rhythm, brisk pace, no long pauses. Only sound surprised "
-            "when something is actually surprising. Don't oversell, and never sound flat or "
-            "like you're reading."),
+    "ALEX": ("You are ALEX, the solo host of a daily markets podcast. Deep, calm, confident "
+             "voice with quiet authority, like a senior analyst delivering the morning call to "
+             "the trading floor. Natural and conversational, never like an announcer or a "
+             "radio ad. Brisk pace with no long pauses; pick up speed in the quick market "
+             "rundown, slow down slightly for the big stories. Emphasize key numbers and "
+             "names. Never sound flat or like you're reading."),
 }
 
 PODCAST_PROMPT = """Write the script for today's episode of "The Morning Brief", a daily
-markets podcast with two male hosts, ALEX and SAM. Audience: finance students
-and young professionals in Canada recruiting for IB, consulting and equity
-research.
+markets podcast with one host, ALEX. Audience: finance students and young
+professionals in Canada recruiting for IB, consulting and equity research.
 
-The feel: two people who follow markets for a living, giving an honest morning
-rundown. Think of a good trading-desk morning call, or two analysts talking at
-the coffee machine. It should sound authentic, not like an entertainment show.
+The feel: a sharp analyst giving the morning call. Authentic, direct and
+informed. It's about what's going on in markets and why, not a list of prices.
 
-How they talk:
-- ALEX leads the rundown. SAM adds the "why it matters", asks the follow-up a
-  smart listener would ask, or pushes back when a point needs nuance. Both
-  know their stuff; neither is just there to react.
-- Conversation comes from the content: a question, a connection between two
-  stories, a "the part I'm watching is...". No banter for its own sake.
-- Keep openings and transitions short and plain, e.g. "Morning, it's Friday,
-  November 7th. Big story today is oil." or "Okay, Canada." Then get into it.
-- Do NOT use: scripted jokes, fake laughter, "wild", "crazy", "buckle up",
-  "let's dive in", "you heard that right", "great question", "wait, really?",
-  "folks", over-the-top excitement, or one host repeating what the other just
-  said. No more than one light aside in the whole episode, and only if it fits.
-- Use contractions and everyday words. Mix short and longer lines. Most turns
-  are one to four sentences. Say numbers the way people speak ("down about
-  three percent", "the ten-year at four-eighteen").
+Structure, in this order:
+1. Open (2 sentences): "Morning, it's [day and date]." Then the headline story
+   in one line.
+2. The tape (rapid fire, about 20% of the episode): go through the markets
+   that matter quickly, one short line each: the move plus a few words on why.
+   e.g. "Oil, down about three percent, as supply worries fade." Group them
+   naturally (stocks, then rates, then commodities and currencies). Skip
+   anything that barely moved. Keep it fast.
+3. The big stories (the heart of the episode, about 45%): the 2-3 stories
+   actually driving markets. For each: what happened, why it happened, who
+   wins and loses, and what it means next. Connect the dots between stories
+   where they're linked.
+4. Deals (about 15%): the M&A and capital markets deals in the brief. Who's
+   buying whom, for how much, the strategic logic, and what it signals about
+   the deal market. If there are no deals in the brief, skip this section
+   without mentioning it.
+5. Canada (short): what's moving the TSX, banks, energy, the Bank of Canada
+   or the loonie, if not already covered.
+6. On deck today (short): the key scheduled events and why they matter.
+7. The interview angle: one thing a listener could say if asked about markets
+   today, in a sentence or two.
+8. Sign-off: one plain line, then "This is for education only, not investment
+   advice."
 
-What to cover, in order:
-1. A one-line open with the date and the headline story.
-2. The numbers that moved most, and the overall mood.
-3. What moved and why, story by story.
-4. What's coming today.
-5. Canada: the TSX, banks, energy, the Bank of Canada, the loonie.
-6. "The interview angle": one thing a listener could say if asked about
-   markets today, explained briefly.
-7. A short, plain sign-off and a one-line note that this is for education,
-   not investment advice.
+How ALEX talks:
+- Like a person, not a script: contractions, everyday words, a mix of short and
+  longer sentences. Use smooth spoken transitions ("Now, the bigger story...",
+  "On the deal front...", "Closer to home...").
+- Say numbers the way people speak ("down about three percent", "the ten-year
+  at four-eighteen", "a two-point-one billion dollar deal").
+- Do NOT use: jokes, "wild", "crazy", "buckle up", "let's dive in", "folks",
+  "you heard that right", "without further ado", rhetorical questions to the
+  listener, or over-the-top excitement.
 
 Rules:
-- About 1,000-1,100 words.
+- About 900-1,000 words.
 - Use only facts and numbers from the brief. Do not add new facts.
-- No sound effects, stage directions, music cues or markdown.
-- Every line must start with "ALEX:" or "SAM:". Nothing else in the output.
+- No sound effects, stage directions, music cues, headings or markdown.
+- Write it as paragraphs. Every paragraph must start with "ALEX:". Nothing else
+  in the output.
 
 THE BRIEF:
 {brief}
@@ -401,7 +421,7 @@ def claude_plain(prompt, max_tokens=3000):
 def parse_script(script):
     lines = []
     for raw in script.splitlines():
-        m = re.match(r"^\s*\**\s*(ALEX|SAM)\s*\**\s*:\s*(.+)$", raw.strip(), re.I)
+        m = re.match(r"^\s*\**\s*(ALEX)\s*\**\s*:\s*(.+)$", raw.strip(), re.I)
         if m:
             lines.append((m.group(1).upper(), m.group(2).strip()))
     return lines
@@ -479,7 +499,7 @@ def make_podcast(brief, out_dir, stem):
         script = claude_plain(PODCAST_PROMPT.format(brief=brief))
         lines = parse_script(script)
         if not lines:
-            raise RuntimeError("script had no ALEX:/SAM: lines")
+            raise RuntimeError("script had no ALEX: lines")
         (out_dir / f"{stem}-script.txt").write_text(script, encoding="utf-8")
         audio = b"".join(tts(text, who, key) for who, text in lines)
         print(f"  voices: {TTS_STATS['main']} lines on {TTS_MODEL}, "
@@ -631,41 +651,42 @@ MARKET_TABS = [
 ]
 
 SITE_CSS = """
-:root{--bg:#F4F3EF;--card:#fff;--ink:#0E1116;--muted:#5B6270;--line:#E6E3DB;--g:#0F6B4F;--g2:#16A06F;--up:#0B6E4F;--down:#B54708;--upbg:#E3F3EC;--downbg:#FBEDE3}
+:root{--bg:#0A0D12;--card:#131820;--card2:#1A202B;--ink:#F3F5F8;--muted:#98A1B0;--line:#232B37;--line2:#2F3846;--g:#3DDC97;--gd:#1A8A5B;--up:#3DDC97;--down:#FF9A5C;--upbg:rgba(61,220,151,.12);--downbg:rgba(255,154,92,.13);--gold:#E3B341}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;color-scheme:dark}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
 a{color:var(--g)}
 button{font:inherit;color:inherit}
 .wrap{max-width:640px;margin:0 auto;padding:14px 16px calc(110px + env(safe-area-inset-bottom))}
 .appbar{display:flex;justify-content:space-between;align-items:center;padding:6px 2px 14px}
 .brand{display:flex;align-items:center;gap:8px;font-family:'Space Grotesk',Inter,sans-serif;font-weight:700;font-size:17px;letter-spacing:-.2px}
-.logo{width:26px;height:26px;border-radius:8px;background:var(--ink);display:flex;align-items:center;justify-content:center}
+.logo{width:26px;height:26px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center}
 .datepill{font-size:13px;font-weight:600;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:6px 12px;border-radius:999px}
-.hero{background:var(--ink);color:#fff;border-radius:26px;padding:22px 20px 18px;position:relative;overflow:hidden}
-.hero::after{content:"";position:absolute;right:-60px;top:-60px;width:180px;height:180px;border-radius:50%;border:1px solid rgba(255,255,255,.08)}
-.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#8FD3B6}
+.hero{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:22px 20px 18px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--g);opacity:.8}
+.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:200px;height:200px;border-radius:50%;border:1px solid rgba(255,255,255,.05)}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--g)}
 .hero h1{font-family:'Space Grotesk',Inter,sans-serif;font-size:28px;line-height:1.15;letter-spacing:-.6px;margin:8px 0 10px;font-weight:700}
-.hero .mood{color:#C4C9D2;font-size:15px;margin:0 0 18px}
-.player{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:12px;display:flex;align-items:center;gap:12px}
-.pbtn{width:52px;height:52px;border-radius:50%;border:0;background:var(--g2);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:transform .15s}
+.hero .mood{color:#B9C0CC;font-size:15px;margin:0 0 18px}
+.player{background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:12px;display:flex;align-items:center;gap:12px}
+.pbtn{width:52px;height:52px;border-radius:50%;border:0;background:var(--g);color:#06140E;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:transform .15s;box-shadow:0 0 0 6px rgba(61,220,151,.12)}
 .pbtn:active{transform:scale(.93)}
 .pmeta{flex:1;min-width:0}
 .ptitle{font-size:14px;font-weight:600;margin:0 0 6px}
-.bar{position:relative;height:6px;border-radius:999px;background:rgba(255,255,255,.15);cursor:pointer}
-.bar>div{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:#8FD3B6;width:0}
+.bar{position:relative;height:6px;border-radius:999px;background:var(--card2);cursor:pointer}
+.bar>div{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--g);width:0}
 .bar input{position:absolute;inset:-10px 0;width:100%;opacity:0;cursor:pointer;margin:0}
-.ptime{display:flex;justify-content:space-between;font-size:11px;color:#9AA1AC;margin-top:6px;font-variant-numeric:tabular-nums}
-.speed{min-width:52px;height:36px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:transparent;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
-.noaudio{font-size:13px;color:#9AA1AC}
-.sec{margin:26px 0 0}
+.ptime{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
+.speed{min-width:52px;height:36px;border-radius:10px;border:1px solid var(--line2);background:transparent;color:var(--ink);font-size:13px;font-weight:700;cursor:pointer}
+.noaudio{font-size:13px;color:var(--muted)}
+.sec{margin:28px 0 0}
 .sech{display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 12px}
 .sech h2{font-family:'Space Grotesk',Inter,sans-serif;font-size:19px;letter-spacing:-.3px;margin:0}
 .sech span{font-size:13px;color:var(--muted)}
 .tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px;margin:0 0 12px}
 .tabs::-webkit-scrollbar{display:none}
-.tab{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;min-height:40px;transition:all .2s}
-.tab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.tab{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;min-height:40px;transition:all .2s}
+.tab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 .panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .panel[hidden]{display:none}
 .panel.show .tile{animation:rise .4s cubic-bezier(.2,.8,.2,1) backwards}
@@ -673,8 +694,8 @@ button{font:inherit;color:inherit}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
 .tile .n{font-size:13px;font-weight:600;color:var(--muted)}
 .tile .v{font-family:'Space Grotesk',Inter,sans-serif;font-size:24px;font-weight:700;letter-spacing:-.5px;margin:4px 0 8px;font-variant-numeric:tabular-nums}
-.chg{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;padding:3px 8px;border-radius:999px}
-.chg.up{color:var(--up);background:var(--upbg)}.chg.down{color:var(--down);background:var(--downbg)}.chg.na{color:var(--muted);background:#EEECE6}
+.chg{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;padding:3px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
+.chg.up{color:var(--up);background:var(--upbg)}.chg.down{color:var(--down);background:var(--downbg)}.chg.na{color:var(--muted);background:var(--card2)}
 .cards{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -16px;padding:2px 16px 6px}
 .cards::-webkit-scrollbar{display:none}
 .story{flex:0 0 86%;scroll-snap-align:start;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:10px;min-height:230px}
@@ -682,15 +703,23 @@ button{font:inherit;color:inherit}
 .tag{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--g);background:var(--upbg);padding:4px 9px;border-radius:999px}
 .count{font-size:12px;color:var(--muted);font-weight:600}
 .story h3{font-family:'Space Grotesk',Inter,sans-serif;font-size:20px;line-height:1.25;letter-spacing:-.3px;margin:2px 0 0}
-.story .lbl{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
-.story p{margin:0;font-size:15px}
-.more{margin-top:auto;align-self:flex-start;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;min-height:40px}
+.story .lbl,.deal .lbl{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
+.story p{margin:0;font-size:15px;color:#D6DBE3}
+.more{margin-top:auto;align-self:flex-start;border:1px solid var(--line2);background:var(--card2);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;min-height:40px}
 .why{display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s ease}
 .why>div{overflow:hidden}
 .why.open{grid-template-rows:1fr}
 .dots{display:flex;justify-content:center;gap:6px;margin-top:10px}
-.dots span{width:7px;height:7px;border-radius:999px;background:#CFCBC0;transition:all .3s}
+.dots span{width:7px;height:7px;border-radius:999px;background:var(--line2);transition:all .3s}
 .dots span.on{width:22px;background:var(--ink)}
+.deals{display:flex;flex-direction:column;gap:10px}
+.deal{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px 18px}
+.deal .row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 8px}
+.dtype{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--gold);background:rgba(227,179,65,.12);padding:4px 9px;border-radius:999px}
+.dval{font-family:'Space Grotesk',Inter,sans-serif;font-weight:700;font-size:17px;font-variant-numeric:tabular-nums}
+.parties{font-family:'Space Grotesk',Inter,sans-serif;font-size:18px;font-weight:700;letter-spacing:-.2px;line-height:1.3;margin:0 0 6px}
+.parties .arrow{color:var(--muted);font-weight:500;margin:0 6px}
+.deal p{margin:0;font-size:14px;color:#C6CCD6}
 .timeline{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:6px 18px}
 .ev{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
 .ev:last-child{border-bottom:0}
@@ -699,15 +728,14 @@ button{font:inherit;color:inherit}
 .empty{color:var(--muted);font-size:15px;padding:14px 0}
 .canada{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px 18px}
 .canada ul{margin:0;padding:0;list-style:none}
-.canada li{position:relative;padding:8px 0 8px 18px;font-size:15px;border-bottom:1px solid var(--line)}
+.canada li{position:relative;padding:8px 0 8px 18px;font-size:15px;border-bottom:1px solid var(--line);color:#D6DBE3}
 .canada li:last-child{border-bottom:0}
-.canada li::before{content:"";position:absolute;left:0;top:17px;width:7px;height:7px;border-radius:50%;background:#C8102E}
-.line{background:var(--g);color:#fff;border-radius:24px;padding:20px}
-.line .eyebrow{color:#BFE8D6}
+.canada li::before{content:"";position:absolute;left:0;top:17px;width:7px;height:7px;border-radius:50%;background:#E5484D}
+.line{background:linear-gradient(180deg,#10291F,#0C1F18);border:1px solid #1D4A36;border-radius:24px;padding:20px}
 .line blockquote{margin:10px 0 16px;font-family:'Space Grotesk',Inter,sans-serif;font-size:19px;line-height:1.35;letter-spacing:-.2px}
 .line .acts{display:flex;gap:10px}
 .lbtn{flex:1;min-height:46px;border-radius:14px;border:0;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
-.lbtn.a{background:#fff;color:var(--g)}.lbtn.b{background:rgba(255,255,255,.14);color:#fff}
+.lbtn.a{background:var(--g);color:#06140E}.lbtn.b{background:rgba(255,255,255,.07);color:var(--ink);border:1px solid rgba(255,255,255,.12)}
 details.src{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:4px 18px}
 details.src summary{cursor:pointer;font-weight:600;font-size:14px;padding:12px 0;list-style:none;display:flex;justify-content:space-between}
 details.src summary::-webkit-details-marker{display:none}
@@ -715,18 +743,18 @@ details.src summary::after{content:"+";font-size:18px;color:var(--muted)}
 details.src[open] summary::after{content:"−"}
 details.src ol{margin:0 0 12px;padding-left:20px;font-size:14px}
 details.src li{margin:0 0 6px}
-.note{background:#FFF4E5;color:#8A3B06;padding:8px 12px;border-radius:12px;font-size:13px;margin:0 0 12px}
+.note{background:var(--downbg);color:#FFB98A;padding:8px 12px;border-radius:12px;font-size:13px;margin:0 0 12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:6px 18px 14px}
-.list a{display:block;padding:16px 18px;background:var(--card);border:1px solid var(--line);border-radius:18px;margin:0 0 10px;text-decoration:none;color:var(--ink);transition:transform .15s}
-.list a:active{transform:scale(.99)}
+.list a{display:block;padding:16px 18px;background:var(--card);border:1px solid var(--line);border-radius:18px;margin:0 0 10px;text-decoration:none;color:var(--ink);transition:transform .15s,border-color .15s}
+.list a:active{transform:scale(.99);border-color:var(--line2)}
 .list .d{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase}
 .list .h{font-family:'Space Grotesk',Inter,sans-serif;font-size:17px;font-weight:700;margin:4px 0 6px;letter-spacing:-.2px}
 .list .c{font-size:12px;font-weight:700;color:var(--g);background:var(--upbg);padding:3px 8px;border-radius:999px;margin-right:6px}
 h1.page{font-family:'Space Grotesk',Inter,sans-serif;font-size:30px;letter-spacing:-.6px;margin:4px 2px 16px}
-footer{color:var(--muted);font-size:12px;margin:26px 2px 0;text-align:center}
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
+footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(10,13,18,.86);backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
 .tabbar .in{max-width:640px;margin:0 auto;display:flex;justify-content:space-around}
-.tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:72px;min-height:48px;justify-content:center;text-decoration:none;color:#7A808B;font-size:11px;font-weight:600}
+.tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:72px;min-height:48px;justify-content:center;text-decoration:none;color:#7D8594;font-size:11px;font-weight:600}
 .tabbar a.on{color:var(--ink)}
 .tabbar a.on svg{color:var(--g)}
 .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1)}
@@ -795,7 +823,7 @@ def page(title, body, root, active):
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#F4F3EF">
+<meta name="theme-color" content="#0A0D12">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>{html.escape(title)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -878,6 +906,15 @@ def day_body(rec, root):
              f'<span>{"Swipe" if len(stories) > 1 else ""}</span></div><div class="cards">{"".join(cards)}</div>'
              f'<div class="dots" aria-hidden="true">{dots}</div></section>') if stories else ""
 
+    dl = []
+    for x in d.get("deals", []):
+        target = f'<span class="arrow">→</span>{e(x["target"])}' if x.get("target") else ""
+        dl.append(f'<article class="deal"><div class="row"><span class="dtype">{e(x.get("type", "Deal"))}</span>'
+                  f'<span class="dval">{e(x.get("value", "Undisclosed"))}</span></div>'
+                  f'<div class="parties">{e(x.get("buyer", ""))}{target}</div><p>{e(x.get("why", ""))}</p></article>')
+    deals = (f'<section class="sec reveal" aria-label="Deals"><div class="sech"><h2>Deals</h2><span>M&amp;A and capital markets</span></div>'
+             f'<div class="deals">{"".join(dl)}</div></section>') if dl else ""
+
     evs = "".join(f'<div class="ev"><div class="t">{e(c.get("time", ""))}</div><div><div class="e">{e(c.get("event", ""))}</div>'
                   f'<div class="w">{e(c.get("why", ""))}</div></div></div>' for c in d.get("calendar", []))
     if not evs:
@@ -900,7 +937,7 @@ def day_body(rec, root):
                    for x in d.get("sources", []) if str(x.get("url", "")).startswith("http"))
     sources = f'<details class="src"><summary>Sources ({len(d.get("sources", []))})</summary><ol>{srcs}</ol></details>' if srcs else ""
 
-    return note + hero + markets_html(rec["nums"]) + moved + coming + canada + line + sources
+    return note + hero + markets_html(rec["nums"]) + moved + deals + coming + canada + line + sources
 
 
 def short_date(iso):
@@ -956,7 +993,7 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
                      f'<div class="h">{html.escape(head)}</div>{chips}</a>')
     (site_dir / "archive.html").write_text(
         page(f"{SITE_NAME}: Archive", f'<h1 class="page">Archive</h1><div class="list">{"".join(items)}</div>',
-             "", "archive").replace("{datepill}", pill(f"{len(records)} days")), encoding="utf-8")
+             "", "archive").replace("{datepill}", pill(f"{len(records)} day{'' if len(records) == 1 else 's'}")), encoding="utf-8")
     print(f"  website updated ({len(records)} days)")
 
 
