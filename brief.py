@@ -250,7 +250,8 @@ after it) with exactly these keys:
 }}
 
 Keep every field concise: one or two sentences each. Don't comment on data
-timing or sources inside the text.
+timing or sources inside the text. Plain text only inside the JSON: no citation
+tags, no HTML, no markdown. Put links only in "sources".
 
 Rules: up to 3 stories, only ones that moved the numbers above or a major
 company or sector. Up to 3 deals, only ones you found in your searches with a
@@ -285,26 +286,49 @@ def write_with_claude(table, today):
     return "".join(b.get("text", "") for b in blocks if b.get("type") == "text").strip()
 
 
+CITE_RE = re.compile(r"</?cite[^>]*>", re.I)
+
+
+def clean_text(v):
+    """Remove citation tags and stray markup the model sometimes adds."""
+    if isinstance(v, str):
+        return re.sub(r"\s{2,}", " ", CITE_RE.sub("", v)).strip()
+    if isinstance(v, list):
+        return [clean_text(x) for x in v]
+    if isinstance(v, dict):
+        return {k: clean_text(x) for k, x in v.items()}
+    return v
+
+
 def parse_brief(text):
     """Pull the JSON object out of Claude's reply. Returns a dict, or None."""
     import json
     if not text:
         return None
-    t = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.M).strip()
-    i, j = t.find("{"), t.rfind("}")
-    if i < 0 or j <= i:
+    t = re.sub(r"```(?:json)?", "", text)
+    t = CITE_RE.sub("", t)
+    dec = json.JSONDecoder(strict=False)
+    d = None
+    for m in re.finditer(r"\{", t):  # try each '{' until one parses as a full object
+        try:
+            obj, _ = dec.raw_decode(t[m.start():])
+        except Exception:
+            continue
+        if isinstance(obj, dict) and ("stories" in obj or "mood" in obj or "headline" in obj):
+            d = obj
+            break
+    if d is None:
         return None
-    try:
-        d = json.loads(t[i:j + 1])
-    except Exception:
-        return None
-    if not isinstance(d, dict) or not d.get("stories") and not d.get("mood"):
-        return None
+    d = clean_text(d)
     d.setdefault("headline", "Today's markets")
     for k in ("stories", "calendar", "canada", "sources", "deals"):
         if not isinstance(d.get(k), list):
             d[k] = []
     return d
+
+
+def looks_like_json(text):
+    return bool(text) and "{" in text and ('"headline"' in text or '"stories"' in text)
 
 
 def brief_markdown(d):
@@ -1003,6 +1027,9 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
     print(f"  website updated ({len(records)} days)")
 
 
+BRIEF_VERSION = "2026-11-07d"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--site", action="store_true", help="also build the website in demo mode")
@@ -1012,6 +1039,7 @@ def main():
     args = ap.parse_args()
 
     today = dt.date.today().strftime("%A, %B %d, %Y")
+    print(f"brief.py version {BRIEF_VERSION}")
     print("Fetching numbers...")
     nums = get_numbers(demo=args.demo)
     table = numbers_table(nums)
@@ -1039,7 +1067,7 @@ def main():
         written = brief_markdown(data)
     elif written:
         print("  ! brief was not in the expected JSON format; using it as plain text", file=sys.stderr)
-        if written.lstrip().startswith("{"):
+        if looks_like_json(written):
             written = "_Today's written brief couldn't be formatted. The numbers and podcast above are still current._"
     else:
         written = ("_AI sections not generated. Set ANTHROPIC_API_KEY to have Claude "
