@@ -249,6 +249,9 @@ after it) with exactly these keys:
   "sources": [{{"title": "Page title", "url": "https://..."}}]
 }}
 
+Keep every field concise: one or two sentences each. Don't comment on data
+timing or sources inside the text.
+
 Rules: up to 3 stories, only ones that moved the numbers above or a major
 company or sector. Up to 3 deals, only ones you found in your searches with a
 source; use an empty list if there are none. Under 550 words of text in total, plain language, no hype,
@@ -263,7 +266,7 @@ def write_with_claude(table, today):
         return None
     body = {
         "model": MODEL,
-        "max_tokens": 3000,
+        "max_tokens": 8000,
         "tools": [{"type": WEB_SEARCH_TOOL, "name": "web_search", "max_uses": 8}],
         "messages": [{"role": "user", "content": PROMPT.format(today=today, table=table)}],
     }
@@ -275,7 +278,10 @@ def write_with_claude(table, today):
     )
     if r.status_code != 200:
         raise RuntimeError(f"Claude API error {r.status_code}: {r.text[:500]}")
-    blocks = r.json().get("content", [])
+    res = r.json()
+    if res.get("stop_reason") == "max_tokens":
+        print("  ! the brief hit the length limit and may be cut off", file=sys.stderr)
+    blocks = res.get("content", [])
     return "".join(b.get("text", "") for b in blocks if b.get("type") == "text").strip()
 
 
@@ -654,19 +660,19 @@ SITE_CSS = """
 :root{--bg:#0A0D12;--card:#131820;--card2:#1A202B;--ink:#F3F5F8;--muted:#98A1B0;--line:#232B37;--line2:#2F3846;--g:#3DDC97;--gd:#1A8A5B;--up:#3DDC97;--down:#FF9A5C;--upbg:rgba(61,220,151,.12);--downbg:rgba(255,154,92,.13);--gold:#E3B341}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{scroll-behavior:smooth;color-scheme:dark}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Geist,Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;font-feature-settings:'ss01';font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
 a{color:var(--g)}
 button{font:inherit;color:inherit}
 .wrap{max-width:640px;margin:0 auto;padding:14px 16px calc(110px + env(safe-area-inset-bottom))}
 .appbar{display:flex;justify-content:space-between;align-items:center;padding:6px 2px 14px}
-.brand{display:flex;align-items:center;gap:8px;font-family:'Space Grotesk',Inter,sans-serif;font-weight:700;font-size:17px;letter-spacing:-.2px}
+.brand{display:flex;align-items:center;gap:8px;font-family:Geist,Inter,sans-serif;font-weight:700;font-size:17px;letter-spacing:-.2px}
 .logo{width:26px;height:26px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center}
 .datepill{font-size:13px;font-weight:600;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:6px 12px;border-radius:999px}
 .hero{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:22px 20px 18px;position:relative;overflow:hidden}
 .hero::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--g);opacity:.8}
 .hero::after{content:"";position:absolute;right:-70px;top:-70px;width:200px;height:200px;border-radius:50%;border:1px solid rgba(255,255,255,.05)}
 .eyebrow{font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--g)}
-.hero h1{font-family:'Space Grotesk',Inter,sans-serif;font-size:28px;line-height:1.15;letter-spacing:-.6px;margin:8px 0 10px;font-weight:700}
+.hero h1{font-family:Geist,Inter,sans-serif;font-size:29px;line-height:1.12;letter-spacing:-1px;margin:8px 0 10px;font-weight:700}
 .hero .mood{color:#B9C0CC;font-size:15px;margin:0 0 18px}
 .player{background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:12px;display:flex;align-items:center;gap:12px}
 .pbtn{width:52px;height:52px;border-radius:50%;border:0;background:var(--g);color:#06140E;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:transform .15s;box-shadow:0 0 0 6px rgba(61,220,151,.12)}
@@ -676,12 +682,12 @@ button{font:inherit;color:inherit}
 .bar{position:relative;height:6px;border-radius:999px;background:var(--card2);cursor:pointer}
 .bar>div{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--g);width:0}
 .bar input{position:absolute;inset:-10px 0;width:100%;opacity:0;cursor:pointer;margin:0}
-.ptime{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
+.ptime{font-family:'Geist Mono',Geist,monospace;display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
 .speed{min-width:52px;height:36px;border-radius:10px;border:1px solid var(--line2);background:transparent;color:var(--ink);font-size:13px;font-weight:700;cursor:pointer}
 .noaudio{font-size:13px;color:var(--muted)}
 .sec{margin:28px 0 0}
 .sech{display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 12px}
-.sech h2{font-family:'Space Grotesk',Inter,sans-serif;font-size:19px;letter-spacing:-.3px;margin:0}
+.sech h2{font-family:Geist,Inter,sans-serif;font-size:19px;letter-spacing:-.3px;margin:0}
 .sech span{font-size:13px;color:var(--muted)}
 .tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px;margin:0 0 12px}
 .tabs::-webkit-scrollbar{display:none}
@@ -693,8 +699,8 @@ button{font:inherit;color:inherit}
 .panel.show .tile:nth-child(2){animation-delay:.05s}.panel.show .tile:nth-child(3){animation-delay:.1s}.panel.show .tile:nth-child(4){animation-delay:.15s}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
 .tile .n{font-size:13px;font-weight:600;color:var(--muted)}
-.tile .v{font-family:'Space Grotesk',Inter,sans-serif;font-size:24px;font-weight:700;letter-spacing:-.5px;margin:4px 0 8px;font-variant-numeric:tabular-nums}
-.chg{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;padding:3px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
+.tile .v{font-family:'Geist Mono',Geist,monospace;letter-spacing:-.8px;font-size:24px;font-weight:700;letter-spacing:-.5px;margin:4px 0 8px;font-variant-numeric:tabular-nums}
+.chg{font-family:'Geist Mono',Geist,monospace;display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;padding:3px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
 .chg.up{color:var(--up);background:var(--upbg)}.chg.down{color:var(--down);background:var(--downbg)}.chg.na{color:var(--muted);background:var(--card2)}
 .cards{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -16px;padding:2px 16px 6px}
 .cards::-webkit-scrollbar{display:none}
@@ -702,7 +708,7 @@ button{font:inherit;color:inherit}
 .story .top{display:flex;justify-content:space-between;align-items:center}
 .tag{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--g);background:var(--upbg);padding:4px 9px;border-radius:999px}
 .count{font-size:12px;color:var(--muted);font-weight:600}
-.story h3{font-family:'Space Grotesk',Inter,sans-serif;font-size:20px;line-height:1.25;letter-spacing:-.3px;margin:2px 0 0}
+.story h3{font-family:Geist,Inter,sans-serif;font-size:20px;line-height:1.25;letter-spacing:-.3px;margin:2px 0 0}
 .story .lbl,.deal .lbl{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
 .story p{margin:0;font-size:15px;color:#D6DBE3}
 .more{margin-top:auto;align-self:flex-start;border:1px solid var(--line2);background:var(--card2);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;min-height:40px}
@@ -716,14 +722,14 @@ button{font:inherit;color:inherit}
 .deal{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px 18px}
 .deal .row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 8px}
 .dtype{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--gold);background:rgba(227,179,65,.12);padding:4px 9px;border-radius:999px}
-.dval{font-family:'Space Grotesk',Inter,sans-serif;font-weight:700;font-size:17px;font-variant-numeric:tabular-nums}
-.parties{font-family:'Space Grotesk',Inter,sans-serif;font-size:18px;font-weight:700;letter-spacing:-.2px;line-height:1.3;margin:0 0 6px}
+.dval{font-family:'Geist Mono',Geist,monospace;font-weight:700;font-size:17px;font-variant-numeric:tabular-nums}
+.parties{font-family:Geist,Inter,sans-serif;font-size:18px;font-weight:700;letter-spacing:-.2px;line-height:1.3;margin:0 0 6px}
 .parties .arrow{color:var(--muted);font-weight:500;margin:0 6px}
 .deal p{margin:0;font-size:14px;color:#C6CCD6}
 .timeline{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:6px 18px}
 .ev{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
 .ev:last-child{border-bottom:0}
-.ev .t{flex:0 0 78px;font-size:13px;font-weight:700;color:var(--g);font-variant-numeric:tabular-nums;padding-top:2px}
+.ev .t{font-family:'Geist Mono',Geist,monospace;flex:0 0 86px;font-size:13px;font-weight:700;color:var(--g);font-variant-numeric:tabular-nums;padding-top:2px}
 .ev .e{font-weight:600;font-size:15px}.ev .w{font-size:13px;color:var(--muted)}
 .empty{color:var(--muted);font-size:15px;padding:14px 0}
 .canada{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px 18px}
@@ -732,7 +738,7 @@ button{font:inherit;color:inherit}
 .canada li:last-child{border-bottom:0}
 .canada li::before{content:"";position:absolute;left:0;top:17px;width:7px;height:7px;border-radius:50%;background:#E5484D}
 .line{background:linear-gradient(180deg,#10291F,#0C1F18);border:1px solid #1D4A36;border-radius:24px;padding:20px}
-.line blockquote{margin:10px 0 16px;font-family:'Space Grotesk',Inter,sans-serif;font-size:19px;line-height:1.35;letter-spacing:-.2px}
+.line blockquote{margin:10px 0 16px;font-family:Geist,Inter,sans-serif;font-size:19px;line-height:1.35;letter-spacing:-.2px}
 .line .acts{display:flex;gap:10px}
 .lbtn{flex:1;min-height:46px;border-radius:14px;border:0;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
 .lbtn.a{background:var(--g);color:#06140E}.lbtn.b{background:rgba(255,255,255,.07);color:var(--ink);border:1px solid rgba(255,255,255,.12)}
@@ -748,9 +754,9 @@ details.src li{margin:0 0 6px}
 .list a{display:block;padding:16px 18px;background:var(--card);border:1px solid var(--line);border-radius:18px;margin:0 0 10px;text-decoration:none;color:var(--ink);transition:transform .15s,border-color .15s}
 .list a:active{transform:scale(.99);border-color:var(--line2)}
 .list .d{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase}
-.list .h{font-family:'Space Grotesk',Inter,sans-serif;font-size:17px;font-weight:700;margin:4px 0 6px;letter-spacing:-.2px}
+.list .h{font-family:Geist,Inter,sans-serif;font-size:17px;font-weight:700;margin:4px 0 6px;letter-spacing:-.2px}
 .list .c{font-size:12px;font-weight:700;color:var(--g);background:var(--upbg);padding:3px 8px;border-radius:999px;margin-right:6px}
-h1.page{font-family:'Space Grotesk',Inter,sans-serif;font-size:30px;letter-spacing:-.6px;margin:4px 2px 16px}
+h1.page{font-family:Geist,Inter,sans-serif;font-size:30px;letter-spacing:-.6px;margin:4px 2px 16px}
 footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(10,13,18,.86);backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
 .tabbar .in{max-width:640px;margin:0 auto;display:flex;justify-content:space-around}
@@ -827,10 +833,10 @@ def page(title, body, root, active):
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>{html.escape(title)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap" rel="stylesheet">
 <style>{SITE_CSS}</style></head>
 <body><div class="wrap">
-<div class="appbar"><div class="brand"><span class="logo" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8FD3B6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg></span>{SITE_NAME}</div>
+<div class="appbar"><div class="brand"><span class="logo" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg></span>{SITE_NAME}</div>
 {{datepill}}</div>
 {body}
 <footer>For education only. Not investment advice. Some numbers come from ETFs that track an index.</footer>
@@ -1017,10 +1023,24 @@ def main():
         print(f"  ! {e}", file=sys.stderr)
         written = None
     data = parse_brief(written)
+    if written and not data and os.getenv("ANTHROPIC_API_KEY"):
+        print("  brief JSON didn't parse; asking Claude to repair it...")
+        try:
+            fixed = claude_plain(
+                "The text below was meant to be one JSON object for a market brief but it is "
+                "invalid or cut off. Return ONLY the corrected, complete JSON object with the same "
+                "keys (headline, mood, stories, deals, calendar, calendar_note, canada, takeaway, "
+                "sources). Keep all the facts as written. If a field is cut off, finish it briefly "
+                "or leave it empty. Do not add new facts.\n\n" + written, max_tokens=6000)
+            data = parse_brief(fixed)
+        except Exception as e:
+            print(f"  ! repair failed: {e}", file=sys.stderr)
     if data:
         written = brief_markdown(data)
     elif written:
         print("  ! brief was not in the expected JSON format; using it as plain text", file=sys.stderr)
+        if written.lstrip().startswith("{"):
+            written = "_Today's written brief couldn't be formatted. The numbers and podcast above are still current._"
     else:
         written = ("_AI sections not generated. Set ANTHROPIC_API_KEY to have Claude "
                    "write sections 1-5._")
