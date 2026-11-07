@@ -54,6 +54,11 @@ button{font:inherit;color:inherit}
 .bubble::after{content:"";position:absolute;left:50%;bottom:-7px;transform:translateX(-50%) rotate(45deg);width:12px;height:12px;background:var(--card2);border-right:1px solid var(--line2);border-bottom:1px solid var(--line2)}
 .node-label{margin-top:12px;font-size:13px;font-weight:600;color:var(--muted);text-align:center;max-width:150px;line-height:1.3}
 .node-label.cur{color:var(--ink)}
+.node.quiet::before{display:none}
+.node.todo svg{width:24px;height:24px}
+.node.nope{animation:shake .4s}
+.node-label.locked{color:#5F6775}
+
 .mascot-side{position:absolute;width:92px;top:38%;pointer-events:none;opacity:.95}
 
 /* lesson */
@@ -290,15 +295,24 @@ function home(keepScroll){
       el("div",{class:"c"},done+" / "+u.lessons.length)));
     const path=el("div",{class:"path",style:`--c:${c};--cd:${cd}`});
     u.lessons.forEach((l,i)=>{
-      const isDone=!!S.done[l.id]; let state="todo";
-      if(isDone) state="done"; else if(!curSet){state="cur"; curSet=true;}
+      const isDone=!!S.done[l.id];
+      const unlocked = i===0 || !!S.done[u.lessons[i-1].id];   // first lesson always open; others need the one before
+      let state = isDone ? "done" : unlocked ? "open" : "locked";
+      const isGlobalNext = state==="open" && !curSet; if(isGlobalNext) curSet=true;
       const off=OFFS[nodeIndex%OFFS.length]; nodeIndex++;
-      const btn=el("button",{class:"node "+state,type:"button","aria-label":`${l.title}, ${isDone?"completed":state==="cur"?"start":"not started"}`,
-        onclick:()=>{sfx.tap();startLesson(u,l,c,cd)},html:state==="done"?ICON.check:state==="cur"?ICON.play:ICON.star.replace('fill="#E3B341" stroke="#A87F1F"','fill="currentColor" stroke="none"')});
+      const cls = state==="done" ? "done" : state==="open" ? "cur" : "todo";
+      const icon = state==="done" ? ICON.check : state==="open" ? ICON.play : ICON.lock;
+      const label = state==="done" ? "completed" : state==="open" ? "start" : "locked, finish "+u.lessons[Math.max(0,i-1)].title+" first";
+      const btn=el("button",{class:"node "+cls+(state==="open"&&!isGlobalNext?" quiet":""),type:"button","aria-label":l.title+", "+label,
+        "aria-disabled":state==="locked"?"true":false,
+        onclick:(ev)=>{
+          if(state==="locked"){ sfx.wrong(); const n=ev.currentTarget; n.classList.remove("nope"); void n.offsetWidth; n.classList.add("nope");
+            toast("Finish \u201c"+u.lessons[i-1].title+"\u201d first"); return; }
+          sfx.tap(); startLesson(u,l,c,cd); },html:icon});
       const w=el("div",{class:"node-wrap",style:`transform:translateX(${off}px)`},
-        state==="cur"?el("div",{class:"bubble","aria-hidden":"true"},done===0&&ui===0?"START":"NEXT UP"):null,
-        btn, el("div",{class:"node-label"+(state==="cur"?" cur":"")},l.title));
-      if(state==="cur"){curNode=w;}
+        isGlobalNext?el("div",{class:"bubble","aria-hidden":"true"},done===0&&ui===0?"START":"NEXT UP"):null,
+        btn, el("div",{class:"node-label"+(state==="open"?" cur":"")+(state==="locked"?" locked":"")},l.title));
+      if(isGlobalNext){curNode=w;}
       if(i===2){ const m=bull("idle"); m.classList.add("mascot-side"); m.setAttribute("style",`${off>0?"left":"right"}:2%;`); path.append(m); }
       path.append(w);
     });
