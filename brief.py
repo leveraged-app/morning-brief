@@ -559,7 +559,7 @@ def send_email(subject, text, html_body=None, attachment=None):
 # ---------------------------------------------------------------------------
 # 6. THE WEBSITE (written to docs/, which GitHub Pages serves)
 # ---------------------------------------------------------------------------
-SITE_NAME = "The Morning Brief"
+SITE_NAME = "Leveraged"
 KEEP_AUDIO_DAYS = 30  # older MP3s are deleted so the project doesn't get too big
 
 SITE_CSS = """
@@ -605,7 +605,7 @@ def page(title, body, root, active):
 <style>{SITE_CSS}</style></head>
 <body><div class="wrap">
 <header><div class="brand">{SITE_NAME}</div>
-<nav aria-label="Main">{link("index.html", "Today", "today")}{link("archive.html", "Archive", "archive")}</nav></header>
+<nav aria-label="Main">{link("index.html", "Today", "today")}{link("learn.html", "Learn", "learn")}{link("archive.html", "Archive", "archive")}</nav></header>
 {body}
 <footer>For education only. Not investment advice. Some numbers may come from ETFs that track an index.</footer>
 </div></body></html>"""
