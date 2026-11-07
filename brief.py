@@ -275,18 +275,20 @@ HOSTS = {  # host name -> OpenAI voice (expressive voices for gpt-4o-mini-tts)
 }
 FALLBACK_VOICES = {"ALEX": "onyx", "SAM": "nova"}  # used only if the newer model fails
 TTS_MODEL = os.getenv("TTS_MODEL", "gpt-4o-mini-tts")
+# Speeds up the finished episode without changing pitch (1.0 = normal, 1.2 = 20% faster)
+PODCAST_SPEED = float(os.getenv("PODCAST_SPEED", "1.18"))
 
 # Acting directions for each host (how they should sound, not what they say)
 HOST_STYLE = {
     "ALEX": ("You are ALEX, co-host of an upbeat morning markets podcast. Energetic, "
              "confident and a little playful, like a friend who loves markets and just had "
-             "a great coffee. Smile while you talk. Vary your pitch, lean into key numbers "
-             "and surprising moves, and keep a brisk, lively pace. Never sound flat or like "
-             "you're reading."),
+             "a great coffee. Smile while you talk. Vary your pitch and lean into key numbers "
+             "and surprising moves. Talk FAST, like a quick morning radio show: brisk pace, "
+             "no long pauses, no drawn-out words. Never sound flat or like you're reading."),
     "SAM": ("You are SAM, co-host of an upbeat morning markets podcast. Warm, curious and "
             "expressive. React with real feeling: surprise, amusement, 'oh, that's "
-            "interesting'. Smile while you talk, vary your pitch and keep a lively, "
-            "conversational pace. Never sound flat or like you're reading."),
+            "interesting'. Smile while you talk and vary your pitch. Talk FAST, like a quick morning "
+            "radio show: brisk pace, no long pauses. Never sound flat or like you're reading."),
 }
 
 PODCAST_PROMPT = """Turn this morning market brief into a script for a two-host daily
@@ -369,6 +371,44 @@ def tts(text, who, key):
     return r.content
 
 
+def find_ffmpeg():
+    import shutil
+    import subprocess
+    exe = shutil.which("ffmpeg")
+    if exe:
+        return exe
+    try:
+        import imageio_ffmpeg
+    except ImportError:
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "imageio-ffmpeg"],
+                       check=False)
+        try:
+            import imageio_ffmpeg
+        except ImportError:
+            return None
+    return imageio_ffmpeg.get_ffmpeg_exe()
+
+
+def speed_up(mp3_path, speed):
+    """Re-encode the joined MP3 at a faster tempo (pitch stays the same)."""
+    import subprocess
+    if abs(speed - 1.0) < 0.01:
+        return
+    exe = find_ffmpeg()
+    if not exe:
+        print("  (speed-up skipped: ffmpeg not available)")
+        return
+    tmp = mp3_path.with_name(mp3_path.stem + "-fast.mp3")
+    res = subprocess.run([exe, "-y", "-loglevel", "error", "-i", str(mp3_path),
+                          "-filter:a", f"atempo={speed}", "-b:a", "128k", str(tmp)],
+                         capture_output=True, text=True)
+    if res.returncode == 0 and tmp.exists():
+        tmp.replace(mp3_path)
+        print(f"  sped up to {speed}x")
+    else:
+        print(f"  ! speed-up failed: {res.stderr[:200]}", file=sys.stderr)
+
+
 def make_podcast(brief, out_dir, stem):
     """Returns the path to the MP3, or None if skipped/failed."""
     key = os.getenv("OPENAI_API_KEY")
@@ -386,6 +426,7 @@ def make_podcast(brief, out_dir, stem):
               f"{TTS_STATS['fallback']} on the older fallback model")
         mp3 = out_dir / f"{stem}-podcast.mp3"
         mp3.write_bytes(audio)
+        speed_up(mp3, PODCAST_SPEED)
         print(f"  podcast saved {mp3} ({len(lines)} lines, {len(audio)//1024} KB)")
         return mp3
     except Exception as e:
