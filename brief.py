@@ -244,7 +244,12 @@ Bullets: time (ET where known), the event, and why it matters in a few words.
 2-4 short bullets.
 
 ## The takeaway
-1-2 sentences starting with "If someone asks you about markets today:".
+Three short interview lines, one for each type of candidate, each 1-2 sentences:
+- IB & Markets: start with "If someone asks you about markets today:" and give the market view.
+- Consulting: the strategic or business angle on today's biggest story, e.g. what a
+  company should do or what it means for an industry.
+- Accounting: the accounting or audit angle, e.g. how a deal, write-down or
+  earnings item would be accounted for, or what an auditor would focus on.
 
 ## Sources
 A numbered list of the pages you used, as Markdown links.
@@ -341,7 +346,9 @@ BRIEF_SCHEMA = {
             "required": ["event"]}},
         "calendar_note": {"type": "string"},
         "canada": {"type": "array", "items": {"type": "string"}},
-        "takeaway": {"type": "string"},
+        "takeaway": {"type": "string", "description": "The IB & Markets interview line"},
+        "takeaway_consulting": {"type": "string", "description": "The Consulting interview line"},
+        "takeaway_accounting": {"type": "string", "description": "The Accounting interview line"},
         "sources": {"type": "array", "items": {"type": "object", "properties": {
             "title": {"type": "string"}, "url": {"type": "string"}}}},
     },
@@ -405,6 +412,10 @@ def brief_markdown(d):
         out.append(d["calendar_note"])
     out += ["", "## 4. Canada corner"] + [f"- {x}" for x in d["canada"]]
     out += ["", "## 5. The takeaway", d.get("takeaway", "")]
+    if d.get("takeaway_consulting"):
+        out.append(f"Consulting angle: {d['takeaway_consulting']}")
+    if d.get("takeaway_accounting"):
+        out.append(f"Accounting angle: {d['takeaway_accounting']}")
     if d["sources"]:
         out += ["", "## Sources"] + [f"{i}. [{x.get('title','Source')}]({x.get('url','')})"
                                       for i, x in enumerate(d["sources"], 1)]
@@ -458,8 +469,8 @@ Structure, in this order:
 5. Canada (short): what's moving the TSX, banks, energy, the Bank of Canada
    or the loonie, if not already covered.
 6. On deck today (short): the key scheduled events and why they matter.
-7. The interview angle: one thing a listener could say if asked about markets
-   today, in a sentence or two.
+7. The interview angle: from the brief's takeaway, one quick line each for
+   IB and markets candidates, consulting candidates and accounting candidates.
 8. Sign-off: one plain line, then "This is for education only, not investment
    advice."
 
@@ -815,6 +826,9 @@ button{font:inherit;color:inherit}
 .canada li:last-child{border-bottom:0}
 .canada li::before{content:"";position:absolute;left:0;top:17px;width:7px;height:7px;border-radius:50%;background:#E5484D}
 .line{background:linear-gradient(180deg,#10291F,#0C1F18);border:1px solid #1D4A36;border-radius:24px;padding:20px}
+.lsegs{display:flex;gap:6px;margin:12px 0 2px;flex-wrap:wrap}
+.lseg{border:1px solid rgba(255,255,255,.14);background:transparent;color:#BFE8D6;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;min-height:36px}
+.lseg[aria-pressed="true"]{background:var(--g);border-color:var(--g);color:#06140E}
 .line blockquote{margin:10px 0 16px;font-family:Geist,Inter,sans-serif;font-size:19px;line-height:1.35;letter-spacing:-.2px}
 .line .acts{display:flex;gap:10px}
 .lbtn{flex:1;min-height:46px;border-radius:14px;border:0;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
@@ -876,9 +890,16 @@ SITE_JS = r"""
     var w=cards.firstElementChild.getBoundingClientRect().width+12; var i=Math.round(cards.scrollLeft/w);
     dots.forEach(function(d,k){d.classList.toggle('on',k===i)});
   }, {passive:true}); }
+  // interview line: one per track, defaults to the track picked in Learn
+  var segs=document.querySelectorAll('.lseg'), qs=document.querySelectorAll('.lq');
+  function showLine(k){ var found=false; qs.forEach(function(q){ if(q.getAttribute('data-k')===k) found=true; });
+    if(!found) return; qs.forEach(function(q){ q.hidden=q.getAttribute('data-k')!==k; });
+    segs.forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-k')===k ? 'true' : 'false'); }); }
+  segs.forEach(function(b){ b.addEventListener('click', function(){ showLine(b.getAttribute('data-k')); }); });
+  try { var st=JSON.parse(localStorage.getItem('leveraged-learn-v1')||'{}'); if(st.track) showLine(st.track); } catch(e) {}
   // copy interview line
   var cp=document.getElementById('copyline');
-  if(cp){ cp.addEventListener('click', function(){ var t=document.getElementById('theline').innerText;
+  if(cp){ cp.addEventListener('click', function(){ var vis=document.querySelector('.lq:not([hidden])'); var t=vis?vis.innerText:'';
     (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){cp.textContent='Copied';setTimeout(function(){cp.textContent='Copy'},1600)}).catch(function(){}); }); }
   // audio player
   var a=document.getElementById('aud'); if(!a) return;
@@ -1013,10 +1034,20 @@ def day_body(rec, root):
     take = d.get("takeaway", "")
     take_clean = re.sub(r"^\s*If someone asks you about markets today:\s*", "", take, flags=re.I)
     take_clean = take_clean[:1].upper() + take_clean[1:]
-    line = (f'<section class="sec reveal" aria-label="Your interview line"><div class="line"><div class="eyebrow">Your interview line</div>'
-            f'<blockquote id="theline">{e(take_clean)}</blockquote><div class="acts">'
-            f'<button class="lbtn a" type="button" id="copyline">Copy</button>'
-            f'<a class="lbtn b" href="{root}learn.html">Practice in Learn</a></div></div></section>') if take else ""
+    lines = [("ib", "IB & Markets", take_clean),
+             ("consulting", "Consulting", d.get("takeaway_consulting", "")),
+             ("accounting", "Accounting", d.get("takeaway_accounting", ""))]
+    lines = [x for x in lines if x[2]]
+    line = ""
+    if lines:
+        seg = "".join(f'<button type="button" class="lseg" data-k="{k}" aria-pressed="{"true" if i == 0 else "false"}">{lab}</button>'
+                      for i, (k, lab, _) in enumerate(lines)) if len(lines) > 1 else ""
+        quotes = "".join(f'<blockquote class="lq" data-k="{k}"{"" if i == 0 else " hidden"}>{e(txt)}</blockquote>'
+                         for i, (k, _, txt) in enumerate(lines))
+        line = (f'<section class="sec reveal" aria-label="Your interview line"><div class="line"><div class="eyebrow">Your interview line</div>'
+                f'{f"<div class=lsegs role=group aria-label=Track>{seg}</div>" if seg else ""}{quotes}<div class="acts">'
+                f'<button class="lbtn a" type="button" id="copyline">Copy</button>'
+                f'<a class="lbtn b" href="{root}learn.html">Practice in Learn</a></div></div></section>')
 
     srcs = "".join(f'<li><a href="{e(x.get("url", ""))}" rel="noopener" target="_blank">{e(x.get("title") or "Source")}</a></li>'
                    for x in d.get("sources", []) if str(x.get("url", "")).startswith("http"))
@@ -1082,7 +1113,7 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
     print(f"  website updated ({len(records)} days)")
 
 
-BRIEF_VERSION = "2026-11-07e"
+BRIEF_VERSION = "2026-11-08a"
 
 
 def main():
