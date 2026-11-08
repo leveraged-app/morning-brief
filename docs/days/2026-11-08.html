@@ -104,6 +104,11 @@ details.src ol{margin:0 0 12px;padding-left:20px;font-size:14px}
 details.src li{margin:0 0 6px}
 .note{background:var(--downbg);color:#FFB98A;padding:8px 12px;border-radius:12px;font-size:13px;margin:0 0 12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:6px 18px 14px}
+.netlist{display:flex;flex-direction:column;gap:10px}
+.net{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px}
+.net .ni{width:36px;height:36px;border-radius:12px;background:rgba(61,220,151,.12);color:var(--g);display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',Geist,monospace;font-weight:700;flex-shrink:0}
+.net h3{margin:2px 0 4px;font-size:16px;color:var(--ink)}
+.net p{margin:0;font-size:14px;color:#C6CCD6}
 .list a{display:block;padding:16px 18px;background:var(--card);border:1px solid var(--line);border-radius:18px;margin:0 0 10px;text-decoration:none;color:var(--ink);transition:transform .15s,border-color .15s}
 .list a:active{transform:scale(.99);border-color:var(--line2)}
 .list .d{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase}
@@ -113,77 +118,112 @@ h1.page{font-family:Geist,Inter,sans-serif;font-size:30px;letter-spacing:-.6px;m
 footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(10,13,18,.86);backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
 .tabbar .in{max-width:640px;margin:0 auto;display:flex;justify-content:space-around}
-.tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:72px;min-height:48px;justify-content:center;text-decoration:none;color:#7D8594;font-size:11px;font-weight:600}
+.tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:64px;min-height:48px;justify-content:center;text-decoration:none;color:#7D8594;font-size:11px;font-weight:600}
 .tabbar a.on{color:var(--ink)}
 .tabbar a.on svg{color:var(--g)}
 .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1)}
 .reveal.in{opacity:1;transform:none}
+.sums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.sum{display:flex;flex-direction:column;gap:8px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;cursor:pointer;min-height:132px;color:var(--ink);transition:transform .12s,border-color .15s,background .15s}
+.sum:active{transform:scale(.98)}
+.sum:hover{border-color:var(--line2)}
+.sum.wide{grid-column:1/-1;min-height:0}
+.sum-h{display:flex;justify-content:space-between;align-items:center}
+.sum-l{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+.sum .go{color:var(--muted)}
+.sum-t{margin:0;font-size:16px;font-weight:600;line-height:1.3;color:var(--ink);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.sum-t.sm{font-size:14px;font-weight:500;color:#D6DBE3}
+.sum-t[hidden],.lq[hidden]{display:none}
+.sum-m{margin-top:auto;font-size:12px;color:var(--muted);font-weight:600}
+.sum .tag,.sum .dtype{align-self:flex-start}
+.when{font-family:'Geist Mono',Geist,monospace;font-size:13px;font-weight:700;color:var(--g)}
+.minis{display:flex;gap:8px;flex-wrap:wrap}
+.mini{display:flex;flex-direction:column;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:8px 10px;flex:1;min-width:92px}
+.mini b{font-size:13px;color:#D6DBE3;font-weight:600}
+.srcbtn{margin-top:12px;background:none;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:8px 2px;text-decoration:underline;text-underline-offset:3px}
+.sheet{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;animation:sheetin .32s cubic-bezier(.2,.8,.2,1)}
+.sheet[hidden]{display:none}
+.sheet-bar{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;border-bottom:1px solid var(--line);background:rgba(10,13,18,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.sheet-bar h2{margin:0;text-align:center;font-size:17px;font-weight:700;letter-spacing:-.2px;color:var(--ink)}
+.sheet-x{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.sheet-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 16px calc(40px + env(safe-area-inset-bottom));max-width:640px;width:100%;margin:0 auto}
+.sheet-body .sec{margin:0}
+.sheet-body .sech{display:none}
+.story-full{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;margin:0 0 12px}
+.story-full .top{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px}
+.story-full h3{font-size:21px;line-height:1.25;letter-spacing:-.4px;margin:0 0 12px;color:var(--ink)}
+.story-full .lbl{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:12px 0 4px}
+.story-full p{margin:0;font-size:15px;color:#D6DBE3}
+.srclist{margin:0;padding-left:20px;font-size:15px}.srclist li{margin:0 0 10px}
+.card.md h2,.card.md h3,.card.md b,.card.md strong,.card.md p,.card.md li{color:var(--ink)!important}
+.card.md h2{border-color:var(--line)!important}
+.card.md a{color:var(--g)!important}
+body.locked{overflow:hidden}
+@keyframes sheetin{from{transform:translateY(28px);opacity:0}to{transform:none;opacity:1}}
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
 </style></head>
 <body><div class="wrap">
 <div class="appbar"><div class="brand"><span class="logo" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg></span>Leveraged</div>
 <span class="datepill">Sun, Nov 8</span></div>
-<section class="hero"><div class="eyebrow">Morning brief</div><h1>Today's markets</h1><div class="player"><button class="pbtn" id="pbtn" type="button" aria-label="Play episode"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button><div class="pmeta"><div class="ptitle">Today's episode</div><div class="bar"><div id="pfill"></div><input id="pseek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Seek"></div><div class="ptime"><span id="pcur">0:00</span><span id="pdur">–:––</span></div></div><button class="speed" id="pspeed" type="button" aria-label="Playback speed">1×</button><audio id="aud" preload="metadata" src="../audio/2026-11-08.mp3"></audio></div></section><section class="sec reveal" aria-label="Markets"><div class="sech"><h2>Markets</h2><span>At the close</span></div><div class="tabs" role="tablist" aria-label="Market groups"><button class="tab" type="button" role="tab" id="tmk0" aria-controls="mk0" aria-selected="true">Stocks</button><button class="tab" type="button" role="tab" id="tmk1" aria-controls="mk1" aria-selected="false">Rates</button><button class="tab" type="button" role="tab" id="tmk2" aria-controls="mk2" aria-selected="false">Commodities</button><button class="tab" type="button" role="tab" id="tmk3" aria-controls="mk3" aria-selected="false">FX & crypto</button></div><div class="panel show" id="mk0" role="tabpanel" aria-labelledby="tmk0"><div class="tile"><div class="n">S&amp;P 500</div><div class="v">7,353.73</div><span class="chg down">▼ 4.36%</span></div><div class="tile"><div class="n">Nasdaq</div><div class="v">24,579.42</div><span class="chg up">▲ 1.09%</span></div><div class="tile"><div class="n">TSX</div><div class="v">n/a</div><span class="chg na">n/a</span></div><div class="tile"><div class="n">VIX</div><div class="v">28.18</div><span class="chg up">▲ 69.66%</span></div></div><div class="panel" id="mk1" role="tabpanel" aria-labelledby="tmk1" hidden><div class="tile"><div class="n">US 10Y yield</div><div class="v">4.84%</div><span class="chg down">▼ 6 bps</span></div><div class="tile"><div class="n">Canada 10Y yield</div><div class="v">3.67%</div><span class="chg down">▼ 3 bps</span></div></div><div class="panel" id="mk2" role="tabpanel" aria-labelledby="tmk2" hidden><div class="tile"><div class="n">WTI oil ($/bbl)</div><div class="v">99.64</div><span class="chg down">▼ 0.42%</span></div><div class="tile"><div class="n">Gold ($/oz)</div><div class="v">4,079.60</div><span class="chg down">▼ 0.82%</span></div><div class="tile"><div class="n">Natural gas ($/MMBtu)</div><div class="v">2.63</div><span class="chg up">▲ 3.54%</span></div></div><div class="panel" id="mk3" role="tabpanel" aria-labelledby="tmk3" hidden><div class="tile"><div class="n">USD/CAD</div><div class="v">1.4113</div><span class="chg up">▲ 0.89%</span></div><div class="tile"><div class="n">US dollar index</div><div class="v">121.67</div><span class="chg down">▼ 0.06%</span></div><div class="tile"><div class="n">Bitcoin</div><div class="v">75,955.76</div><span class="chg up">▲ 0.27%</span></div></div></section><section class="sec"><div class="card"><h2 style="margin:24px 0 8px;font-size:17px;color:#12161C;border-bottom:1px solid #E3E1DA;padding-bottom:6px;">Headline</h2>
-<p style="margin:0 0 12px;line-height:1.5;">AI stocks trigger Wall Street&#x27;s worst day since April 2025</p>
+<section class="hero"><div class="eyebrow">Morning brief</div><h1>Today's markets</h1><div class="player"><button class="pbtn" id="pbtn" type="button" aria-label="Play episode"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button><div class="pmeta"><div class="ptitle">Today's episode</div><div class="bar"><div id="pfill"></div><input id="pseek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Seek"></div><div class="ptime"><span id="pcur">0:00</span><span id="pdur">–:––</span></div></div><button class="speed" id="pspeed" type="button" aria-label="Playback speed">1×</button><audio id="aud" preload="metadata" src="../audio/2026-11-08.mp3"></audio></div></section><section class="sec reveal" aria-label="Markets"><div class="sech"><h2>Markets</h2><span>At the close</span></div><div class="tabs" role="tablist" aria-label="Market groups"><button class="tab" type="button" role="tab" id="tmk0" aria-controls="mk0" aria-selected="true">Stocks</button><button class="tab" type="button" role="tab" id="tmk1" aria-controls="mk1" aria-selected="false">Rates</button><button class="tab" type="button" role="tab" id="tmk2" aria-controls="mk2" aria-selected="false">Commodities</button><button class="tab" type="button" role="tab" id="tmk3" aria-controls="mk3" aria-selected="false">FX & crypto</button></div><div class="panel show" id="mk0" role="tabpanel" aria-labelledby="tmk0"><div class="tile"><div class="n">S&amp;P 500</div><div class="v">7,353.73</div><span class="chg down">▼ 4.36%</span></div><div class="tile"><div class="n">Nasdaq</div><div class="v">24,579.42</div><span class="chg up">▲ 1.09%</span></div><div class="tile"><div class="n">TSX</div><div class="v">n/a</div><span class="chg na">n/a</span></div><div class="tile"><div class="n">VIX</div><div class="v">28.18</div><span class="chg up">▲ 69.66%</span></div></div><div class="panel" id="mk1" role="tabpanel" aria-labelledby="tmk1" hidden><div class="tile"><div class="n">US 10Y yield</div><div class="v">4.84%</div><span class="chg down">▼ 6 bps</span></div><div class="tile"><div class="n">Canada 10Y yield</div><div class="v">3.67%</div><span class="chg down">▼ 3 bps</span></div></div><div class="panel" id="mk2" role="tabpanel" aria-labelledby="tmk2" hidden><div class="tile"><div class="n">WTI oil ($/bbl)</div><div class="v">99.64</div><span class="chg down">▼ 0.42%</span></div><div class="tile"><div class="n">Gold ($/oz)</div><div class="v">4,079.60</div><span class="chg down">▼ 0.82%</span></div><div class="tile"><div class="n">Natural gas ($/MMBtu)</div><div class="v">2.63</div><span class="chg up">▲ 3.54%</span></div></div><div class="panel" id="mk3" role="tabpanel" aria-labelledby="tmk3" hidden><div class="tile"><div class="n">USD/CAD</div><div class="v">1.4113</div><span class="chg up">▲ 0.89%</span></div><div class="tile"><div class="n">US dollar index</div><div class="v">121.67</div><span class="chg down">▼ 0.06%</span></div><div class="tile"><div class="n">Bitcoin</div><div class="v">75,991.09</div><span class="chg up">▲ 0.31%</span></div></div></section><section class="sec"><div class="card md"><h2 style="margin:24px 0 8px;font-size:17px;color:#12161C;border-bottom:1px solid #E3E1DA;padding-bottom:6px;">Headline</h2>
+<p style="margin:0 0 12px;line-height:1.5;">AI chip rout sends Wall Street tumbling</p>
 <h2 style="margin:24px 0 8px;font-size:17px;color:#12161C;border-bottom:1px solid #E3E1DA;padding-bottom:6px;">Mood</h2>
-<p style="margin:0 0 12px;line-height:1.5;">Risk-off. The VIX jumped roughly 70%, its biggest one-day surge in almost two years. The selling started in chips and spread to the whole market.</p>
+<p style="margin:0 0 12px;line-height:1.5;">Risk-off. Semiconductor and AI stocks led the selloff, volatility jumped, and investors moved into Treasuries.</p>
 <h2 style="margin:24px 0 8px;font-size:17px;color:#12161C;border-bottom:1px solid #E3E1DA;padding-bottom:6px;">What moved and why</h2>
-<p style="margin:0 0 12px;line-height:1.5;"><b>Post-election AI trade unwinds, S&amp;P 500 tumbles</b> [Stocks]<br>Why it happened: Investors reacted to a Democratic midterm sweep with an AI sell-off. They worried about possible Democratic scrutiny of data centre expansion. Hedging by options market makers and volatility-control funds added to the selling.<br>Why it matters: All 11 S&amp;P 500 sectors closed lower. Forced selling can overshoot, so volatility may stay high.</p>
-<p style="margin:0 0 12px;line-height:1.5;"><b>Loonie slides after Canada&#x27;s surprise job losses</b> [FX]<br>Why it happened: Canada lost 4,700 jobs in October when analysts expected a gain of 13,600. The unemployment rate rose to 6.7%. Global equity volatility added to the pressure.<br>Why it matters: Weak jobs data lowered the odds of another Bank of Canada hike. That narrows the rate gap with the US and weakens the Canadian dollar.</p>
-<p style="margin:0 0 12px;line-height:1.5;"><b>Fed hike bets build even as long yields ease</b> [Rates]<br>Why it happened: US payrolls rose 165,000 in October and unemployment dipped to 4.1%. CME FedWatch put the chance of a December quarter-point hike at 76.8%.<br>Why it matters: The 10-year yield has fallen from a 5.31% peak on Oct. 5 to about 4.86%. Markets are pricing tighter near-term policy while worrying about growth.</p>
+<p style="margin:0 0 12px;line-height:1.5;"><b>S&amp;P 500 suffers its worst day since April 2025 as AI trade unravels</b> [Stocks]<br>Why it happened: Investors pulled back from tech over doubts about data-center spending after the midterm elections. Qualcomm fell 13% after its smartphone chip revenue dropped 26%. The VIX jumped as the selloff hit.<br>Why it matters: The S&amp;P 500 tech sector fell 7.3% and the semiconductor index more than 12%, both their biggest one-day drops in over six years. Valuations on AI names are now being questioned.</p>
+<p style="margin:0 0 12px;line-height:1.5;"><b>Treasury yields slide as investors seek safety</b> [Rates]<br>Why it happened: Treasuries drew demand as equities sank. Oil also fell sharply over the week on hopes of a US-Iran deal.<br>Why it matters: Rate-hike bets remain high. Futures priced roughly an 80% chance of a December Fed hike after the jobs report. Inflation data this week could shift that.</p>
+<p style="margin:0 0 12px;line-height:1.5;"><b>Loonie weakens on a third straight monthly Canadian job loss</b> [Canada]<br>Why it happened: Employment fell 4,700 in October and unemployment hit 6.7%, a six-month high. Strong US payrolls widened the US-Canada rate gap.<br>Why it matters: Weak jobs data cools Bank of Canada hike expectations while US rates stay firm. That keeps pressure on the Canadian dollar.</p>
 <h2 style="margin:24px 0 8px;font-size:17px;color:#12161C;border-bottom:1px solid #E3E1DA;padding-bottom:6px;">Deals</h2>
 <ul style="margin:0 0 12px;padding-left:20px;">
-<li style="margin:0 0 6px;line-height:1.5;"><b>Stock merger, Marvell / Lumentum, $115B enterprise value.</b> Lumentum holders get 4.5 Marvell shares each. The logic is to combine electrical and optical technologies for AI connectivity. Marvell fell 28.1% on the week.</li>
-<li style="margin:0 0 6px;line-height:1.5;"><b>Minority stake purchase, Blackstone-led group / Mitsubishi unit holding an LNG Canada interest, US$3.1B.</b> CPP Investments, OMERS, IMCO and PSP Investments joined Blackstone to buy 49.9% of the unit. The appeal is long-life export infrastructure with steady returns.</li>
-<li style="margin:0 0 6px;line-height:1.5;"><b>Acquisition, AMD / Taalas (Toronto), about US$2.9B.</b> AMD disclosed the price of the cash-and-stock deal; US$1.4B depends on conditions. The aim is to add AI inference chip talent in Canada.</li>
+<li style="margin:0 0 6px;line-height:1.5;"><b>M&amp;A (minority stake):</b> Blackstone-led group buys a 49.9% stake in an LNG Canada business from a Mitsubishi unit for $3.1 billion. Pension investors CPP Investments, OMERS, IMCO and PSP are also in the group. It gives infrastructure money long-life LNG export cash flows.</li>
+<li style="margin:0 0 6px;line-height:1.5;"><b>M&amp;A (cross-border tech):</b> AMD will pay about US$2.9 billion for Toronto chip startup Taalas. US$1.4 billion of that depends on unspecified conditions. Taalas builds chips that run large language models. The deal buys AI-inference talent and technology.</li>
 </ul>
 <h2 style="margin:24px 0 8px;font-size:17px;color:#12161C;border-bottom:1px solid #E3E1DA;padding-bottom:6px;">What&#x27;s coming today</h2>
 <ul style="margin:0 0 12px;padding-left:20px;">
-<li style="margin:0 0 6px;line-height:1.5;"><b>Sunday:</b> No major scheduled data. Next week&#x27;s tone depends on Tuesday&#x27;s CPI.</li>
-<li style="margin:0 0 6px;line-height:1.5;"><b>Monday, 10:00 ET:</b> Wholesale inventories. A minor read on the economy.</li>
-<li style="margin:0 0 6px;line-height:1.5;"><b>Monday, 11:00 ET:</b> NY Fed consumer expectations survey. It shows how households see inflation.</li>
-<li style="margin:0 0 6px;line-height:1.5;"><b>Monday, 1:00 pm ET:</b> US Treasury sells $58B of 3-year notes. A test of demand for bonds.</li>
-<li style="margin:0 0 6px;line-height:1.5;"><b>Monday, after close:</b> Take-Two and Skydance report.</li>
-<li style="margin:0 0 6px;line-height:1.5;"><b>Tuesday, 8:30 ET:</b> US October CPI. It is the key input for the December Fed decision.</li>
+<li style="margin:0 0 6px;line-height:1.5;"><b>Sunday:</b> No major scheduled releases, and North American markets are closed.</li>
+<li style="margin:0 0 6px;line-height:1.5;"><b>Mon, 10:30 a.m.:</b> Bank of Canada Market Participants Survey. It shows how the market expects rates to move.</li>
+<li style="margin:0 0 6px;line-height:1.5;"><b>Mon:</b> Berkshire Hathaway, Constellation Energy, CT REIT and IA Financial report.</li>
+<li style="margin:0 0 6px;line-height:1.5;"><b>Tue:</b> US October CPI, with forecasts near 3.9%. It decides how likely a December hike looks.</li>
+<li style="margin:0 0 6px;line-height:1.5;"><b>Tue, after close:</b> CoreWeave earnings. The company is central to worries about AI financing.</li>
 </ul>
 <h2 style="margin:24px 0 8px;font-size:17px;color:#12161C;border-bottom:1px solid #E3E1DA;padding-bottom:6px;">Canada corner</h2>
 <ul style="margin:0 0 12px;padding-left:20px;">
-<li style="margin:0 0 6px;line-height:1.5;">The S&amp;P/TSX composite rose 183.82 points on Friday. The week was volatile.</li>
-<li style="margin:0 0 6px;line-height:1.5;">The Bank of Canada&#x27;s rate hike last week was its first since July 2023. Weak jobs data now clouds the next move.</li>
-<li style="margin:0 0 6px;line-height:1.5;">The Bank and the finance ministry renewed the 2% inflation target in a five-year framework.</li>
-<li style="margin:0 0 6px;line-height:1.5;">Canadian Natural will buy back $800M of shares a month in November and December.</li>
+<li style="margin:0 0 6px;line-height:1.5;">The Bank of Canada raised its rate to 2.5% last month over worries that energy prices could feed broader inflation.</li>
+<li style="margin:0 0 6px;line-height:1.5;">Market odds of a December BoC hike dropped to 35% from 40%.</li>
+<li style="margin:0 0 6px;line-height:1.5;">Canadian Natural Resources is targeting $800 million of buybacks a month in November and December.</li>
+<li style="margin:0 0 6px;line-height:1.5;">CGI, CAE and Franco-Nevada report Wednesday, and Brookfield and Canadian Tire on Thursday.</li>
 </ul>
 <h2 style="margin:24px 0 8px;font-size:17px;color:#12161C;border-bottom:1px solid #E3E1DA;padding-bottom:6px;">The takeaway</h2>
 <ul style="margin:0 0 12px;padding-left:20px;">
-<li style="margin:0 0 6px;line-height:1.5;"><b>IB &amp; Markets:</b> If someone asks you about markets today: it was a positioning-driven AI de-risking, not a credit event. The next test is whether CPI backs the Fed&#x27;s December hike.</li>
-<li style="margin:0 0 6px;line-height:1.5;"><b>Consulting:</b> A data-centre supplier should stress-test demand and permitting scenarios under tougher regulation. It should also avoid depending on a few hyperscaler customers.</li>
-<li style="margin:0 0 6px;line-height:1.5;"><b>Accounting:</b> Marvell&#x27;s fixed exchange ratio means the purchase price is measured at the closing share price. A lower stock price shrinks goodwill, and auditors will test the fair value of the acquired assets.</li>
+<li style="margin:0 0 6px;line-height:1.5;"><b>IB &amp; Markets:</b> If someone asks you about markets today: the AI trade took a hard hit while oil and yields eased, and Tuesday&#x27;s CPI will test whether a December Fed hike is still the base case.</li>
+<li style="margin:0 0 6px;line-height:1.5;"><b>Consulting:</b> AI suppliers that depend on outside financing, such as data-center builders, look more exposed than cash-rich giants. They should stage capex to customer commitments and line up funding early.</li>
+<li style="margin:0 0 6px;line-height:1.5;"><b>Accounting:</b> In AMD&#x27;s Taalas deal, the US$1.4 billion contingent portion would be measured at fair value at acquisition. Any later change in that estimate would run through earnings. An auditor would check whether payments tied to staying with the company are really compensation expense.</li>
 </ul>
 <h2 style="margin:24px 0 8px;font-size:17px;color:#12161C;border-bottom:1px solid #E3E1DA;padding-bottom:6px;">Sources</h2>
 <ol style="margin:0 0 12px;padding-left:20px;">
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.cnn.com/2026/11/05/investing/tech-heavy-nasdaq-plunges" style="color:#0B6E4F;">CNN – tech sell-off</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.marketindex.com.au/news/wall-street-panic-sell-off-sends-vix-up-almost-70-heres-what-usually-happens-next" style="color:#0B6E4F;">Market Index – VIX spike</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.chaincatcher.com/en/article/2302515" style="color:#0B6E4F;">Bloomberg via ChainCatcher – sell-off mechanics</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.theglobeandmail.com/investing/article-canadian-dollar-hits-nearly-three-week-low-on-surprise-jobs-loss/" style="color:#0B6E4F;">Globe and Mail – CAD on jobs loss</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://rallies.ai/news/canadian-dollar-hits-nearly-three-week-low-on-surprise-jobs-loss-5c99e3531b895edd" style="color:#0B6E4F;">TLT News – Canada jobs data</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.cnbc.com/2026/11/06/treasury-yields-inch-lower-as-investors-look-ahead-to-key-jobs-data-.html" style="color:#0B6E4F;">CNBC – Treasury yields and jobs report</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://finance.yahoo.com/economy/policy/articles/odds-december-rate-hike-jump-173301658.html" style="color:#0B6E4F;">Yahoo Finance – December hike odds</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://mlq.ai/news/december-fed-hike-odds-near-77-after-jobs-surprise-as-ai-selloff-pressure-moves-into-credit-markets/" style="color:#0B6E4F;">MLQ – yields and hike odds</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.sec.gov/Archives/edgar/data/0001633978/000119312526442760/d163169d425.htm" style="color:#0B6E4F;">Marvell – deal press release (SEC Form 425)</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.fool.com/coverage/market-movers/2026/11/07/why-marvell-technology-stock-plunged-28-1-this-week/" style="color:#0B6E4F;">Motley Fool – Marvell shares</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://bnnbloomberg.ca/business/company-news/2026/11/02/blackstone-led-group-buys-into-mitsubishi-subsidiary-that-holds-lng-canada-stake" style="color:#0B6E4F;">BNN Bloomberg – LNG Canada stake</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.schwab.com/learn/story/market-volatility" style="color:#0B6E4F;">Schwab – Stocks Plunge on AI Fears</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://seekingalpha.com/news/4666899-midday-need-to-know-chip-stocks-plunge-vix-surges-more" style="color:#0B6E4F;">Seeking Alpha – Midday Need to Know</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.tradingview.com/news/seekingalpha:eb5b5646a094b:0-midday-need-to-know-chip-stocks-plunge-vix-surges-more/" style="color:#0B6E4F;">TradingView – Midday Need to Know</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.theglobeandmail.com/investing/article-wall-streets-week-ahead-as-tech-swoon-roils-market-us-inflation-data/" style="color:#0B6E4F;">Globe and Mail – Wall Street&#x27;s week ahead</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://rallies.ai/news/us-yields-fall-in-choppy-session-as-oil-rises-and-equities-sink-bd93f70686ea4829" style="color:#0B6E4F;">Rallies.ai – US yields fall</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://financefeeds.com/brent-crude-oil-price-98-32-saturday-week-ahead-us-iran-deal-bets-cpi-10-november-bull-105-bear-93/" style="color:#0B6E4F;">FinanceFeeds – Brent and US-Iran deal bets</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.fxempire.com/forecasts/article/the-week-ahead-cpi-and-tech-earnings-test-a-fragile-stock-market-1643118" style="color:#0B6E4F;">FXEmpire – The Week Ahead</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.theglobeandmail.com/investing/article-canadian-dollar-hits-nearly-three-week-low-on-surprise-jobs-loss/" style="color:#0B6E4F;">Globe and Mail – Canadian dollar and jobs</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://rallies.ai/news/canadian-dollar-hits-nearly-three-week-low-on-surprise-jobs-loss-5c99e3531b895edd" style="color:#0B6E4F;">Rallies.ai – Canadian dollar</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.briefs.co/news/loonie-logs-steepest-weekly-slide-since-late-september/" style="color:#0B6E4F;">Briefs.co – Loonie tumbles</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.bloomberg.com/news/articles/2026-11-02/blackstone-leads-3-1-billion-deal-to-acquire-lng-canada-stake" style="color:#0B6E4F;">Bloomberg – Blackstone LNG Canada stake</a></li>
 <li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.theglobeandmail.com/business/article-amd-to-pay-29-billion-for-ai-chip-firm-taalas/" style="color:#0B6E4F;">Globe and Mail – AMD/Taalas</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://investrade.com/weekly-event-calendar-11-09-2026-11-13-2026/" style="color:#0B6E4F;">Investrade – weekly calendar</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.stocktitan.net/articles/earnings-calendar-week-of-november-9-2026" style="color:#0B6E4F;">Stock Titan – earnings calendar</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://fxempire.com/forecasts/article/the-week-ahead-cpi-and-tech-earnings-test-a-fragile-stock-market-1643118" style="color:#0B6E4F;">FXEmpire – week ahead</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://ca.finance.yahoo.com/news/p-tsx-composite-more-100-163153492.html" style="color:#0B6E4F;">Yahoo Finance Canada – TSX Friday</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.fxstreet.com/news/canadian-dollar-eyes-mid-september-lows-vs-broadly-weaker-usd-as-traders-await-us-data-202611040819" style="color:#0B6E4F;">FXStreet – CAD and BoC hike</a></li>
-<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.sec.gov/Archives/edgar/data/0001017413/000101741326000049/a09302026q3pressrelease.htm" style="color:#0B6E4F;">Canadian Natural Q3 release (SEC)</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.theglobeandmail.com/business/article-federal-budget-2026-amd-taalas-florida-property-tax-snowbirds-november/" style="color:#0B6E4F;">Globe and Mail – AMD/Taalas week-ahead roundup</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.theglobeandmail.com/investing/markets/inside-the-market/article-calendar-what-investors-need-to-know-for-the-week-ahead-165/" style="color:#0B6E4F;">Globe and Mail – Calendar</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://ca.headtopics.com/news/calendar-what-investors-need-to-know-for-the-week-ahead-89624989" style="color:#0B6E4F;">Headtopics – Calendar</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://coincentral.com/the-week-ahead-cpi-coreweave-earnings-and-fed-speeches-in-focus" style="color:#0B6E4F;">CoinCentral – Week ahead</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://ca.finance.yahoo.com/news/five-things-watch-canadian-business-150010465.html" style="color:#0B6E4F;">Yahoo Finance Canada – Five things to watch</a></li>
+<li style="margin:0 0 6px;line-height:1.5;"><a href="https://www.sec.gov/Archives/edgar/data/0001017413/000101741326000049/a09302026q3pressrelease.htm" style="color:#0B6E4F;">Canadian Natural Resources Q3 release (SEC)</a></li>
 </ol></div></section>
 <footer>For education only. Not investment advice. Some numbers come from ETFs that track an index.</footer>
 </div>
-<nav class="tabbar" aria-label="Main"><div class="in"><a href="../index.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>Today</a><a href="../learn.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/></svg>Learn</a><a href="../archive.html" class="on" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>Archive</a></div></nav>
+<nav class="tabbar" aria-label="Main"><div class="in"><a href="../index.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>Today</a><a href="../learn.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/></svg>Learn</a><a href="../network.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16 14.2c2.9.3 5 2.6 5 5.8"/></svg>Network</a><a href="../archive.html" class="on" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>Archive</a></div></nav>
 <script>
 (function(){
   var rm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -208,10 +248,23 @@ footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
     var w=cards.firstElementChild.getBoundingClientRect().width+12; var i=Math.round(cards.scrollLeft/w);
     dots.forEach(function(d,k){d.classList.toggle('on',k===i)});
   }, {passive:true}); }
+  // section sheets: tap a tile to open, back button or arrow to close
+  function openSheet(id, push){ var sh=document.getElementById(id); if(!sh) return;
+    document.querySelectorAll('.sheet').forEach(function(x){x.hidden=true});
+    sh.hidden=false; document.body.classList.add('locked'); sh.querySelector('.sheet-body').scrollTop=0;
+    if(push) history.pushState({sheet:id},'','#'+id); var x=sh.querySelector('.sheet-x'); if(x) x.focus(); }
+  function closeSheets(){ document.querySelectorAll('.sheet').forEach(function(x){x.hidden=true}); document.body.classList.remove('locked'); }
+  document.querySelectorAll('[data-open]').forEach(function(b){ b.addEventListener('click', function(){ openSheet(b.getAttribute('data-open'), true); }); });
+  document.querySelectorAll('.sheet-x').forEach(function(b){ b.addEventListener('click', function(){
+    if(history.state && history.state.sheet) history.back(); else { closeSheets(); history.replaceState(null,'',location.pathname); } }); });
+  window.addEventListener('popstate', function(){ var id=location.hash.slice(1); if(id && document.getElementById(id)) openSheet(id,false); else closeSheets(); });
+  document.addEventListener('keydown', function(ev){ if(ev.key==='Escape' && document.querySelector('.sheet:not([hidden])')){ var x=document.querySelector('.sheet:not([hidden]) .sheet-x'); if(x) x.click(); } });
+  if(location.hash && document.getElementById(location.hash.slice(1)) && document.getElementById(location.hash.slice(1)).classList.contains('sheet')) openSheet(location.hash.slice(1), false);
   // interview line: one per track, defaults to the track picked in Learn
   var segs=document.querySelectorAll('.lseg'), qs=document.querySelectorAll('.lq');
   function showLine(k){ var found=false; qs.forEach(function(q){ if(q.getAttribute('data-k')===k) found=true; });
     if(!found) return; qs.forEach(function(q){ q.hidden=q.getAttribute('data-k')!==k; });
+    document.querySelectorAll('.lprev').forEach(function(q){ q.hidden=q.getAttribute('data-k')!==k; });
     segs.forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-k')===k ? 'true' : 'false'); }); }
   segs.forEach(function(b){ b.addEventListener('click', function(){ showLine(b.getAttribute('data-k')); }); });
   try { var st=JSON.parse(localStorage.getItem('leveraged-learn-v1')||'{}'); if(st.track) showLine(st.track); } catch(e) {}
