@@ -391,6 +391,96 @@ def structure_brief(md):
     return None
 
 
+def parse_markdown_brief(md):
+    """Backup that needs no AI: split the written brief by its fixed headings."""
+    if not md or "## " not in md:
+        return None
+    md = CITE_RE.sub("", md)
+    secs, cur = {}, None
+    for raw in md.splitlines():
+        line = raw.strip()
+        h = re.match(r"^#{1,3}\s*(?:\d+\.\s*)?(.+?)\s*#*$", line)
+        if h:
+            cur = h.group(1).strip().lower()
+            secs[cur] = []
+        elif cur is not None and line:
+            secs[cur].append(line)
+
+    def get(*keys):
+        for k, v in secs.items():
+            if any(x in k for x in keys):
+                return v
+        return []
+
+    def plain(t):
+        t = re.sub(r"\[([^\]]+)\]\((https?://[^)]+)\)", r"\1", t)
+        return re.sub(r"\*\*|__|^[-*•]\s+|^#+\s*", "", t).strip()
+
+    d = {"headline": plain((get("headline") or ["Today's markets"])[0]),
+         "mood": " ".join(plain(x) for x in get("mood")),
+         "stories": [], "deals": [], "calendar": [], "calendar_note": "", "canada": [],
+         "takeaway": "", "sources": []}
+
+    st = None
+    for line in get("what moved"):
+        low = plain(line).lower()
+        if low.startswith("why it happened"):
+            if st: st["why_happened"] = plain(line).split(":", 1)[-1].strip()
+        elif low.startswith("why it matters"):
+            if st: st["why_matters"] = plain(line).split(":", 1)[-1].strip()
+        elif line.startswith("**") or line[:1] in "-*•" or not st:
+            tag = re.search(r"\[([A-Za-z &]+)\]", line)
+            title = plain(re.sub(r"\[[A-Za-z &]+\]", "", line)).rstrip(" -–—:")
+            st = {"tag": tag.group(1).strip() if tag else "Markets", "title": title,
+                  "why_happened": "", "why_matters": ""}
+            d["stories"].append(st)
+    d["stories"] = [x for x in d["stories"] if x["title"]][:3]
+
+    for line in get("deals"):
+        t = plain(line)
+        if not t or t.lower().startswith("none"):
+            continue
+        bold = re.match(r"^[-*•]?\s*\*\*(.+?)\*\*[\s:.\-–—]*(.*)$", line)
+        head, rest = (bold.group(1), bold.group(2)) if bold else (t, "")
+        typ = "Deal"
+        if ":" in head and len(head.split(":", 1)[0]) < 20:
+            typ, head = [x.strip() for x in head.split(":", 1)]
+        val = re.search(r"((?:US|C|CA)?\$\s?[\d.,]+\s?(?:billion|million|B|M|bn|mm)?)", t)
+        d["deals"].append({"type": typ, "buyer": plain(head), "target": "",
+                           "value": val.group(1) if val else "Undisclosed", "why": plain(rest)})
+    d["deals"] = d["deals"][:3]
+
+    for line in get("coming", "calendar", "on deck"):
+        t = plain(line)
+        if not t:
+            continue
+        m = re.match(r"^(.{1,28}?(?:AM|PM|ET|open|close|day|Today|Mon|Tue|Wed|Thu|Fri)[^:]*):\s*(.+)$", t, re.I)
+        when, rest = (m.group(1), m.group(2)) if m else ("", t)
+        parts = re.split(r"\s+[—–-]\s+|\.\s+", rest, maxsplit=1)
+        d["calendar"].append({"time": when.strip(), "event": parts[0].strip().rstrip("."),
+                              "why": parts[1].strip() if len(parts) > 1 else ""})
+    if len(d["calendar"]) == 1 and not d["calendar"][0]["time"] and "nothing" in d["calendar"][0]["event"].lower():
+        d["calendar_note"], d["calendar"] = d["calendar"][0]["event"], []
+
+    d["canada"] = [plain(x) for x in get("canada") if plain(x)][:4]
+
+    for line in get("takeaway", "interview"):
+        t = plain(line)
+        low = t.lower()
+        if low.startswith("consulting"):
+            d["takeaway_consulting"] = t.split(":", 1)[-1].strip()
+        elif low.startswith("accounting"):
+            d["takeaway_accounting"] = t.split(":", 1)[-1].strip()
+        elif low.startswith("ib") or "markets today" in low or not d["takeaway"]:
+            d["takeaway"] = re.sub(r"^ib\s*(?:&|and)\s*markets\s*:\s*", "", t, flags=re.I).strip()
+
+    for line in get("sources"):
+        for title, url in re.findall(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", line):
+            d["sources"].append({"title": title, "url": url})
+
+    return d if (d["stories"] or d["mood"]) else None
+
+
 def brief_markdown(d):
     """Turn the structured brief into the Markdown used by the email and podcast."""
     out = ["## 1. The numbers", d.get("mood", ""), "", "## 2. What moved and why"]
@@ -1065,7 +1155,7 @@ def tile_btn(sid, label, meta, body, wide=False):
 def day_body(rec, root):
     e = html.escape
     note = '<p class="note">Sample numbers (demo mode), not real market data.</p>' if rec.get("demo") else ""
-    d = rec.get("data") or parse_brief(rec.get("written", ""))
+    d = rec.get("data") or parse_brief(rec.get("written", "")) or parse_markdown_brief(rec.get("written", ""))
     if not d and looks_like_json(rec.get("written", "")):
         rec = dict(rec, written="_This day's written brief couldn't be formatted._")
     if not d:  # older days saved before the redesign
@@ -1247,7 +1337,7 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
     print(f"  website updated ({len(records)} days)")
 
 
-BRIEF_VERSION = "2026-11-08b"
+BRIEF_VERSION = "2026-11-08c"
 
 
 def main():
@@ -1277,9 +1367,13 @@ def main():
         try:
             data = structure_brief(written)
         except Exception as e:
-            print(f"  ! formatting step failed: {e}", file=sys.stderr)
+            print(f"  ! formatting step failed: {str(e)[:400]}", file=sys.stderr)
         if not data:
             data = parse_brief(written)  # in case the reply was already structured
+        if not data:
+            data = parse_markdown_brief(written)
+            if data:
+                print("  used the backup formatter (no AI needed)")
     if data:
         written = brief_markdown(data)
         print(f"  formatted OK: {len(data['stories'])} stories, {len(data['deals'])} deals")
