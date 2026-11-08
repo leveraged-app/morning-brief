@@ -88,6 +88,9 @@ button{font:inherit;color:inherit}
 .canada li:last-child{border-bottom:0}
 .canada li::before{content:"";position:absolute;left:0;top:17px;width:7px;height:7px;border-radius:50%;background:#E5484D}
 .line{background:linear-gradient(180deg,#10291F,#0C1F18);border:1px solid #1D4A36;border-radius:24px;padding:20px}
+.lsegs{display:flex;gap:6px;margin:12px 0 2px;flex-wrap:wrap}
+.lseg{border:1px solid rgba(255,255,255,.14);background:transparent;color:#BFE8D6;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;min-height:36px}
+.lseg[aria-pressed="true"]{background:var(--g);border-color:var(--g);color:#06140E}
 .line blockquote{margin:10px 0 16px;font-family:Geist,Inter,sans-serif;font-size:19px;line-height:1.35;letter-spacing:-.2px}
 .line .acts{display:flex;gap:10px}
 .lbtn{flex:1;min-height:46px;border-radius:14px;border:0;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
@@ -120,8 +123,8 @@ footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
 </style></head>
 <body><div class="wrap">
 <div class="appbar"><div class="brand"><span class="logo" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg></span>Leveraged</div>
-<span class="datepill">1 day</span></div>
-<h1 class="page">Archive</h1><div class="list"><a href="days/2026-11-07.html"><div class="d">Sat, Nov 7</div><div class="h">Morning brief</div><span class="c">Podcast</span></a></div>
+<span class="datepill">2 days</span></div>
+<h1 class="page">Archive</h1><div class="list"><a href="days/2026-11-08.html"><div class="d">Sun, Nov 8</div><div class="h">Morning brief</div><span class="c">Podcast</span></a><a href="days/2026-11-07.html"><div class="d">Sat, Nov 7</div><div class="h">Morning brief</div><span class="c">Podcast</span></a></div>
 <footer>For education only. Not investment advice. Some numbers come from ETFs that track an index.</footer>
 </div>
 <nav class="tabbar" aria-label="Main"><div class="in"><a href="index.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>Today</a><a href="learn.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/></svg>Learn</a><a href="archive.html" class="on" aria-current="page"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>Archive</a></div></nav>
@@ -149,9 +152,16 @@ footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
     var w=cards.firstElementChild.getBoundingClientRect().width+12; var i=Math.round(cards.scrollLeft/w);
     dots.forEach(function(d,k){d.classList.toggle('on',k===i)});
   }, {passive:true}); }
+  // interview line: one per track, defaults to the track picked in Learn
+  var segs=document.querySelectorAll('.lseg'), qs=document.querySelectorAll('.lq');
+  function showLine(k){ var found=false; qs.forEach(function(q){ if(q.getAttribute('data-k')===k) found=true; });
+    if(!found) return; qs.forEach(function(q){ q.hidden=q.getAttribute('data-k')!==k; });
+    segs.forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-k')===k ? 'true' : 'false'); }); }
+  segs.forEach(function(b){ b.addEventListener('click', function(){ showLine(b.getAttribute('data-k')); }); });
+  try { var st=JSON.parse(localStorage.getItem('leveraged-learn-v1')||'{}'); if(st.track) showLine(st.track); } catch(e) {}
   // copy interview line
   var cp=document.getElementById('copyline');
-  if(cp){ cp.addEventListener('click', function(){ var t=document.getElementById('theline').innerText;
+  if(cp){ cp.addEventListener('click', function(){ var vis=document.querySelector('.lq:not([hidden])'); var t=vis?vis.innerText:'';
     (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){cp.textContent='Copied';setTimeout(function(){cp.textContent='Copy'},1600)}).catch(function(){}); }); }
   // audio player
   var a=document.getElementById('aud'); if(!a) return;
