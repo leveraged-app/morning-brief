@@ -230,12 +230,18 @@ One or two sentences on the overall tone (risk-on / risk-off, what led).
 ## What moved and why
 Up to 3 stories. For each: a bold one-line title, a tag in brackets (one of
 Stocks, Rates, Energy, Commodities, FX, Macro, Earnings, Canada, Crypto), then
-"Why it happened:" and "Why it matters:" lines, one or two sentences each.
+"Why it happened:" and "Why it matters:" lines, one or two sentences each, then
+a "Full story:" line followed by 3-4 short paragraphs (about 150-200 words in
+total) for readers who want every detail: the background, what exactly happened
+with the key numbers, who wins and loses, and what to watch next.
 
 ## Deals
-Up to 3 notable M&A or capital markets deals from the last few days: type,
-buyer, target, deal size, and one or two sentences on the logic. Write "None"
-if you found none.
+Up to 3 notable M&A or capital markets deals from the last few days. For each,
+a bullet starting with a bold "Type: buyer → target" (type is Acquisition,
+Merger, IPO or Financing), the deal size, and one or two sentences on the logic.
+Then a "Full story:" line followed by 2-3 short paragraphs (about 120-160 words)
+covering the terms, the strategic rationale, valuation if reported, and what it
+signals. Write "None" if you found none.
 
 ## What's coming today
 Bullets: time (ET where known), the event, and why it matters in a few words.
@@ -254,8 +260,8 @@ Three short interview lines, one for each type of candidate, each 1-2 sentences:
 ## Sources
 A numbered list of the pages you used, as Markdown links.
 
-Rules: under 550 words in total, plain language, no hype, no buy/sell
-recommendations. Do not repeat the numbers table. Don't comment on data timing.
+Rules: keep everything except the full stories under 550 words, plain language,
+no hype, no buy/sell recommendations. Do not repeat the numbers table. Don't comment on data timing.
 """
 
 
@@ -336,11 +342,14 @@ BRIEF_SCHEMA = {
         "mood": {"type": "string"},
         "stories": {"type": "array", "items": {"type": "object", "properties": {
             "tag": {"type": "string"}, "title": {"type": "string"},
-            "why_happened": {"type": "string"}, "why_matters": {"type": "string"}},
+            "why_happened": {"type": "string"}, "why_matters": {"type": "string"},
+            "full": {"type": "string", "description": "The full story: 3-4 paragraphs separated by blank lines"}},
             "required": ["title", "why_matters"]}},
         "deals": {"type": "array", "items": {"type": "object", "properties": {
             "type": {"type": "string"}, "buyer": {"type": "string"}, "target": {"type": "string"},
-            "value": {"type": "string"}, "why": {"type": "string"}}, "required": ["buyer"]}},
+            "value": {"type": "string"}, "why": {"type": "string"},
+            "full": {"type": "string", "description": "The full story: 2-3 paragraphs separated by blank lines"}},
+            "required": ["buyer"]}},
         "calendar": {"type": "array", "items": {"type": "object", "properties": {
             "time": {"type": "string"}, "event": {"type": "string"}, "why": {"type": "string"}},
             "required": ["event"]}},
@@ -370,6 +379,7 @@ def structure_brief(md):
         "tool_choice": {"type": "tool", "name": "publish_brief"},
         "messages": [{"role": "user", "content":
             "Copy this market brief into the publish_brief tool. Keep the wording and facts; "
+            "put each story's and deal's 'Full story' text in its full field, keeping the paragraph breaks; "
             "don't add anything. Use plain text only (no citation tags, HTML or markdown). "
             "Leave deals empty if the brief says none. If nothing is scheduled today, leave "
             "calendar empty and say so in calendar_note.\n\n" + CITE_RE.sub("", md)}],
@@ -422,8 +432,19 @@ def parse_markdown_brief(md):
          "takeaway": "", "sources": []}
 
     st = None
+    infull = False
     for line in get("what moved"):
         low = plain(line).lower()
+        if low.startswith("full story"):
+            infull = True
+            rest = plain(line).split(":", 1)[-1].strip()
+            if st is not None and rest:
+                st["full"] = (st.get("full", "") + "\n\n" + rest).strip()
+            continue
+        if infull and st is not None and not line.startswith("**"):
+            st["full"] = (st.get("full", "") + "\n\n" + plain(line)).strip()
+            continue
+        infull = False
         if low.startswith("why it happened"):
             if st: st["why_happened"] = plain(line).split(":", 1)[-1].strip()
         elif low.startswith("why it matters"):
@@ -436,17 +457,31 @@ def parse_markdown_brief(md):
             d["stories"].append(st)
     d["stories"] = [x for x in d["stories"] if x["title"]][:3]
 
+    infull = False
     for line in get("deals"):
         t = plain(line)
         if not t or t.lower().startswith("none"):
             continue
+        if t.lower().startswith("full story"):
+            infull = True
+            rest = t.split(":", 1)[-1].strip()
+            if d["deals"] and rest:
+                d["deals"][-1]["full"] = (d["deals"][-1].get("full", "") + "\n\n" + rest).strip()
+            continue
+        if infull and d["deals"] and not re.match(r"^[-*•]?\s*\*\*", line):
+            d["deals"][-1]["full"] = (d["deals"][-1].get("full", "") + "\n\n" + t).strip()
+            continue
+        infull = False
         bold = re.match(r"^[-*•]?\s*\*\*(.+?)\*\*[\s:.\-–—]*(.*)$", line)
         head, rest = (bold.group(1), bold.group(2)) if bold else (t, "")
         typ = "Deal"
         if ":" in head and len(head.split(":", 1)[0]) < 20:
             typ, head = [x.strip() for x in head.split(":", 1)]
         val = re.search(r"((?:US|C|CA)?\$\s?[\d.,]+\s?(?:billion|million|B|M|bn|mm)?)", t)
-        d["deals"].append({"type": typ, "buyer": plain(head), "target": "",
+        buyer, target = plain(head), ""
+        if "→" in buyer:
+            buyer, target = [x.strip() for x in buyer.split("→", 1)]
+        d["deals"].append({"type": typ, "buyer": buyer, "target": target,
                            "value": val.group(1) if val else "Undisclosed", "why": plain(rest)})
     d["deals"] = d["deals"][:3]
 
@@ -481,12 +516,15 @@ def parse_markdown_brief(md):
     return d if (d["stories"] or d["mood"]) else None
 
 
-def brief_markdown(d):
-    """Turn the structured brief into the Markdown used by the email and podcast."""
+def brief_markdown(d, full=False):
+    """Turn the structured brief into Markdown (full=True adds the long-form stories, for the podcast)."""
     out = ["## 1. The numbers", d.get("mood", ""), "", "## 2. What moved and why"]
     for st in d["stories"]:
         out += [f"**{st.get('title','')}**", f"Why it happened: {st.get('why_happened','')}",
-                f"Why it matters: {st.get('why_matters','')}", ""]
+                f"Why it matters: {st.get('why_matters','')}"]
+        if full and st.get("full"):
+            out += [f"Full story: {st['full']}"]
+        out.append("")
     if d["deals"]:
         out += ["## Deals"]
         for x in d["deals"]:
@@ -494,6 +532,8 @@ def brief_markdown(d):
             if x.get("target"):
                 who += f" → {x['target']}"
             out += [f"- **{x.get('type', 'Deal')}: {who}** ({x.get('value', 'Undisclosed')}). {x.get('why', '')}"]
+            if full and x.get("full"):
+                out += [f"  Full story: {x['full']}"]
         out.append("")
     out += ["## 3. What's coming today"]
     for c in d["calendar"]:
@@ -982,6 +1022,12 @@ footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
 .story-full h3{font-size:21px;line-height:1.25;letter-spacing:-.4px;margin:0 0 12px;color:var(--ink)}
 .story-full .lbl{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:12px 0 4px}
 .story-full p{margin:0;font-size:15px;color:#D6DBE3}
+.readfull{margin-top:14px;display:inline-flex;align-items:center;gap:6px;background:rgba(61,220,151,.1);color:var(--g);border:1px solid rgba(61,220,151,.3);border-radius:999px;padding:9px 14px;font-size:14px;font-weight:700;cursor:pointer;min-height:42px}
+.readfull .go{color:var(--g)}
+.longread{padding:4px 2px}
+.longread h3{font-size:25px;line-height:1.2;letter-spacing:-.6px;margin:12px 0 16px;color:var(--ink)}
+.longread .lr-body p{font-size:16.5px;line-height:1.65;color:#D6DBE3;margin:0 0 16px}
+.longread .lr-body p:first-child{font-size:18px;color:var(--ink)}
 .srclist{margin:0;padding-left:20px;font-size:15px}.srclist li{margin:0 0 10px}
 .card.md h2,.card.md h3,.card.md b,.card.md strong,.card.md p,.card.md li{color:var(--ink)!important}
 .card.md h2{border-color:var(--line)!important}
@@ -1146,6 +1192,15 @@ def sheet(sid, title, inner):
             f'<h2 id="{sid}-t">{title}</h2><span></span></div><div class="sheet-body">{inner}</div></section>')
 
 
+def full_html(kicker, title, text, has_sources):
+    e = html.escape
+    paras = [p.strip() for p in re.split(r"\n\s*\n|\n", text or "") if p.strip()]
+    body = "".join(f"<p>{e(p)}</p>" for p in paras)
+    src = '<button class="srcbtn" type="button" data-open="sources">See sources</button>' if has_sources else ""
+    return (f'<article class="longread"><span class="tag">{e(kicker)}</span><h3>{e(title)}</h3>'
+            f'<div class="lr-body">{body}</div>{src}</article>')
+
+
 def tile_btn(sid, label, meta, body, wide=False):
     return (f'<button class="sum{" wide" if wide else ""}" type="button" data-open="{sid}">'
             f'<div class="sum-h"><span class="sum-l">{label}</span>{ARROW}</div>{body}'
@@ -1168,6 +1223,7 @@ def day_body(rec, root):
             f'<p class="mood">{e(d.get("mood", ""))}</p>{player_html(rec, root)}</section>')
 
     tiles, sheets = [], []
+    srcs_list = [x for x in d.get("sources", []) if str(x.get("url", "")).startswith("http")]
 
     # Markets: three headline numbers on the tile, every number in the sheet
     chips = []
@@ -1190,11 +1246,16 @@ def day_body(rec, root):
                               f'<span class="tag">{e(top.get("tag", "Markets"))}</span><p class="sum-t">{e(top.get("title", ""))}</p>'))
         blocks = []
         for i, st in enumerate(stories, 1):
+            more = ""
+            if st.get("full"):
+                fid = f"story{i}"
+                more = f'<button class="readfull" type="button" data-open="{fid}">Read the full story {ARROW}</button>'
+                sheets.append(sheet(fid, "Full story", full_html(st.get("tag", "Markets"), st.get("title", ""), st["full"], bool(srcs_list))))
             blocks.append(f'<article class="story-full"><div class="top"><span class="tag">{e(st.get("tag", "Markets"))}</span>'
                           f'<span class="count">{i} of {len(stories)}</span></div><h3>{e(st.get("title", ""))}</h3>'
                           f'<div class="lbl">Why it happened</div><p>{e(st.get("why_happened", ""))}</p>'
-                          f'<div class="lbl">Why it matters</div><p>{e(st.get("why_matters", ""))}</p></article>')
-        sheets.append(sheet("moved", "What moved", "".join(blocks)))
+                          f'<div class="lbl">Why it matters</div><p>{e(st.get("why_matters", ""))}</p>{more}</article>')
+        sheets.insert(0, sheet("moved", "What moved", "".join(blocks)))
 
     # Deals
     deals = d.get("deals", [])
@@ -1204,12 +1265,18 @@ def day_body(rec, root):
         tiles.append(tile_btn("deals", "Deals", f'{len(deals)} {"deal" if len(deals) == 1 else "deals"}',
                               f'<span class="dtype">{e(x.get("type", "Deal"))} · {e(x.get("value", ""))}</span><p class="sum-t">{who}</p>'))
         dl = []
-        for x in deals:
+        for j, x in enumerate(deals, 1):
             target = f'<span class="arrow">→</span>{e(x["target"])}' if x.get("target") else ""
+            more = ""
+            if x.get("full"):
+                fid = f"deal{j}"
+                head = x.get("buyer", "") + (f" → {x['target']}" if x.get("target") else "")
+                more = f'<button class="readfull" type="button" data-open="{fid}">Read the full story {ARROW}</button>'
+                sheets.append(sheet(fid, "Full story", full_html(f'{x.get("type", "Deal")} · {x.get("value", "")}', head, x["full"], bool(srcs_list))))
             dl.append(f'<article class="deal"><div class="row"><span class="dtype">{e(x.get("type", "Deal"))}</span>'
                       f'<span class="dval">{e(x.get("value", "Undisclosed"))}</span></div>'
-                      f'<div class="parties">{e(x.get("buyer", ""))}{target}</div><p>{e(x.get("why", ""))}</p></article>')
-        sheets.append(sheet("deals", "Deals", f'<div class="deals">{"".join(dl)}</div>'))
+                      f'<div class="parties">{e(x.get("buyer", ""))}{target}</div><p>{e(x.get("why", ""))}</p>{more}</article>')
+        sheets.insert(0, sheet("deals", "Deals", f'<div class="deals">{"".join(dl)}</div>'))
 
     # Coming up
     cal = d.get("calendar", [])
@@ -1321,9 +1388,7 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
         page(SITE_NAME, day_body(latest, ""), "", "today").replace("{datepill}", pill(short_date(latest["iso"]))),
         encoding="utf-8")
 
-    (site_dir / "network.html").write_text(
-        page(f"{SITE_NAME}: Network", NETWORK_BODY, "", "network").replace("{datepill}", pill("Coming soon")),
-        encoding="utf-8")
+    # network.html is its own file (uploaded to docs/), so it isn't rebuilt here
 
     items = []
     for r in records:
@@ -1337,7 +1402,32 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
     print(f"  website updated ({len(records)} days)")
 
 
-BRIEF_VERSION = "2026-11-08c"
+def resolve_market_calls(nums):
+    """Score the daily market calls for the latest S&P 500 close. Needs SUPABASE_URL and SUPABASE_SERVICE_KEY."""
+    url, key = os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_KEY")
+    spx = nums.get("S&P 500")
+    if not (url and key):
+        print("  (market calls not scored: SUPABASE_URL / SUPABASE_SERVICE_KEY not set)")
+        return
+    if not spx or not re.match(r"^\d{4}-\d{2}-\d{2}$", str(spx.get("asof", ""))):
+        print("  ! market calls not scored: no dated S&P 500 close", file=sys.stderr)
+        return
+    headers = {"apikey": key, "Content-Type": "application/json"}
+    if key.startswith("eyJ"):  # older-style keys also need this header
+        headers["Authorization"] = f"Bearer {key}"
+    went_up = spx["value"] > spx["prev"]
+    try:
+        r = requests.post(f"{url.rstrip('/')}/rest/v1/rpc/resolve_market_calls", headers=headers,
+                          json={"p_date": spx["asof"], "p_up": went_up}, timeout=TIMEOUT)
+        if r.status_code == 200:
+            print(f"  market calls for {spx['asof']} scored ({'up' if went_up else 'down'} day): {r.text} calls")
+        else:
+            print(f"  ! market call scoring failed {r.status_code}: {r.text[:200]}", file=sys.stderr)
+    except Exception as e:
+        print(f"  ! market call scoring failed: {e}", file=sys.stderr)
+
+
+BRIEF_VERSION = "2026-11-08e"
 
 
 def main():
@@ -1353,6 +1443,8 @@ def main():
     print("Fetching numbers...")
     nums = get_numbers(demo=args.demo)
     table = numbers_table(nums)
+    if not args.demo:
+        resolve_market_calls(nums)
 
     print("Writing brief...")
     try:
@@ -1401,7 +1493,10 @@ def main():
     mp3 = None
     if not args.no_podcast:
         print("Making podcast...")
-        mp3 = make_podcast(brief, out_dir, path.stem)
+        pod_input = brief
+        if data:
+            pod_input = f"# Morning Brief: {today}\n\n{table}\n\n{brief_markdown(data, full=True)}"
+        mp3 = make_podcast(pod_input, out_dir, path.stem)
 
     if not args.demo or args.site:
         site_dir = Path(os.getenv("SITE_DIR") or Path(__file__).parent / "docs")
