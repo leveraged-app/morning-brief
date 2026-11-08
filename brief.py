@@ -842,6 +842,11 @@ details.src ol{margin:0 0 12px;padding-left:20px;font-size:14px}
 details.src li{margin:0 0 6px}
 .note{background:var(--downbg);color:#FFB98A;padding:8px 12px;border-radius:12px;font-size:13px;margin:0 0 12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:6px 18px 14px}
+.netlist{display:flex;flex-direction:column;gap:10px}
+.net{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px}
+.net .ni{width:36px;height:36px;border-radius:12px;background:rgba(61,220,151,.12);color:var(--g);display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',Geist,monospace;font-weight:700;flex-shrink:0}
+.net h3{margin:2px 0 4px;font-size:16px;color:var(--ink)}
+.net p{margin:0;font-size:14px;color:#C6CCD6}
 .list a{display:block;padding:16px 18px;background:var(--card);border:1px solid var(--line);border-radius:18px;margin:0 0 10px;text-decoration:none;color:var(--ink);transition:transform .15s,border-color .15s}
 .list a:active{transform:scale(.99);border-color:var(--line2)}
 .list .d{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase}
@@ -851,11 +856,48 @@ h1.page{font-family:Geist,Inter,sans-serif;font-size:30px;letter-spacing:-.6px;m
 footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(10,13,18,.86);backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
 .tabbar .in{max-width:640px;margin:0 auto;display:flex;justify-content:space-around}
-.tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:72px;min-height:48px;justify-content:center;text-decoration:none;color:#7D8594;font-size:11px;font-weight:600}
+.tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:64px;min-height:48px;justify-content:center;text-decoration:none;color:#7D8594;font-size:11px;font-weight:600}
 .tabbar a.on{color:var(--ink)}
 .tabbar a.on svg{color:var(--g)}
 .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1)}
 .reveal.in{opacity:1;transform:none}
+.sums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.sum{display:flex;flex-direction:column;gap:8px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;cursor:pointer;min-height:132px;color:var(--ink);transition:transform .12s,border-color .15s,background .15s}
+.sum:active{transform:scale(.98)}
+.sum:hover{border-color:var(--line2)}
+.sum.wide{grid-column:1/-1;min-height:0}
+.sum-h{display:flex;justify-content:space-between;align-items:center}
+.sum-l{font-size:12px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+.sum .go{color:var(--muted)}
+.sum-t{margin:0;font-size:16px;font-weight:600;line-height:1.3;color:var(--ink);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.sum-t.sm{font-size:14px;font-weight:500;color:#D6DBE3}
+.sum-t[hidden],.lq[hidden]{display:none}
+.sum-m{margin-top:auto;font-size:12px;color:var(--muted);font-weight:600}
+.sum .tag,.sum .dtype{align-self:flex-start}
+.when{font-family:'Geist Mono',Geist,monospace;font-size:13px;font-weight:700;color:var(--g)}
+.minis{display:flex;gap:8px;flex-wrap:wrap}
+.mini{display:flex;flex-direction:column;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:8px 10px;flex:1;min-width:92px}
+.mini b{font-size:13px;color:#D6DBE3;font-weight:600}
+.srcbtn{margin-top:12px;background:none;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;padding:8px 2px;text-decoration:underline;text-underline-offset:3px}
+.sheet{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;animation:sheetin .32s cubic-bezier(.2,.8,.2,1)}
+.sheet[hidden]{display:none}
+.sheet-bar{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;border-bottom:1px solid var(--line);background:rgba(10,13,18,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.sheet-bar h2{margin:0;text-align:center;font-size:17px;font-weight:700;letter-spacing:-.2px;color:var(--ink)}
+.sheet-x{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.sheet-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 16px calc(40px + env(safe-area-inset-bottom));max-width:640px;width:100%;margin:0 auto}
+.sheet-body .sec{margin:0}
+.sheet-body .sech{display:none}
+.story-full{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;margin:0 0 12px}
+.story-full .top{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px}
+.story-full h3{font-size:21px;line-height:1.25;letter-spacing:-.4px;margin:0 0 12px;color:var(--ink)}
+.story-full .lbl{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin:12px 0 4px}
+.story-full p{margin:0;font-size:15px;color:#D6DBE3}
+.srclist{margin:0;padding-left:20px;font-size:15px}.srclist li{margin:0 0 10px}
+.card.md h2,.card.md h3,.card.md b,.card.md strong,.card.md p,.card.md li{color:var(--ink)!important}
+.card.md h2{border-color:var(--line)!important}
+.card.md a{color:var(--g)!important}
+body.locked{overflow:hidden}
+@keyframes sheetin{from{transform:translateY(28px);opacity:0}to{transform:none;opacity:1}}
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
 """
@@ -863,6 +905,7 @@ footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
 TAB_ICONS = {
     "today": '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
     "learn": '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/></svg>',
+    "network": '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16 14.2c2.9.3 5 2.6 5 5.8"/></svg>',
     "archive": '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>',
 }
 
@@ -890,10 +933,23 @@ SITE_JS = r"""
     var w=cards.firstElementChild.getBoundingClientRect().width+12; var i=Math.round(cards.scrollLeft/w);
     dots.forEach(function(d,k){d.classList.toggle('on',k===i)});
   }, {passive:true}); }
+  // section sheets: tap a tile to open, back button or arrow to close
+  function openSheet(id, push){ var sh=document.getElementById(id); if(!sh) return;
+    document.querySelectorAll('.sheet').forEach(function(x){x.hidden=true});
+    sh.hidden=false; document.body.classList.add('locked'); sh.querySelector('.sheet-body').scrollTop=0;
+    if(push) history.pushState({sheet:id},'','#'+id); var x=sh.querySelector('.sheet-x'); if(x) x.focus(); }
+  function closeSheets(){ document.querySelectorAll('.sheet').forEach(function(x){x.hidden=true}); document.body.classList.remove('locked'); }
+  document.querySelectorAll('[data-open]').forEach(function(b){ b.addEventListener('click', function(){ openSheet(b.getAttribute('data-open'), true); }); });
+  document.querySelectorAll('.sheet-x').forEach(function(b){ b.addEventListener('click', function(){
+    if(history.state && history.state.sheet) history.back(); else { closeSheets(); history.replaceState(null,'',location.pathname); } }); });
+  window.addEventListener('popstate', function(){ var id=location.hash.slice(1); if(id && document.getElementById(id)) openSheet(id,false); else closeSheets(); });
+  document.addEventListener('keydown', function(ev){ if(ev.key==='Escape' && document.querySelector('.sheet:not([hidden])')){ var x=document.querySelector('.sheet:not([hidden]) .sheet-x'); if(x) x.click(); } });
+  if(location.hash && document.getElementById(location.hash.slice(1)) && document.getElementById(location.hash.slice(1)).classList.contains('sheet')) openSheet(location.hash.slice(1), false);
   // interview line: one per track, defaults to the track picked in Learn
   var segs=document.querySelectorAll('.lseg'), qs=document.querySelectorAll('.lq');
   function showLine(k){ var found=false; qs.forEach(function(q){ if(q.getAttribute('data-k')===k) found=true; });
     if(!found) return; qs.forEach(function(q){ q.hidden=q.getAttribute('data-k')!==k; });
+    document.querySelectorAll('.lprev').forEach(function(q){ q.hidden=q.getAttribute('data-k')!==k; });
     segs.forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-k')===k ? 'true' : 'false'); }); }
   segs.forEach(function(b){ b.addEventListener('click', function(){ showLine(b.getAttribute('data-k')); }); });
   try { var st=JSON.parse(localStorage.getItem('leveraged-learn-v1')||'{}'); if(st.track) showLine(st.track); } catch(e) {}
@@ -939,7 +995,7 @@ def page(title, body, root, active):
 {body}
 <footer>For education only. Not investment advice. Some numbers come from ETFs that track an index.</footer>
 </div>
-<nav class="tabbar" aria-label="Main"><div class="in">{tab("index.html", "Today", "today")}{tab("learn.html", "Learn", "learn")}{tab("archive.html", "Archive", "archive")}</div></nav>
+<nav class="tabbar" aria-label="Main"><div class="in">{tab("index.html", "Today", "today")}{tab("learn.html", "Learn", "learn")}{tab("network.html", "Network", "network")}{tab("archive.html", "Archive", "archive")}</div></nav>
 <script>{SITE_JS}</script>
 </body></html>"""
 
@@ -983,6 +1039,29 @@ def player_html(rec, root):
             f'<audio id="aud" preload="metadata" src="{root}audio/{rec["audio"]}"></audio></div>')
 
 
+def _first_sentence(t, n=140):
+    t = (t or "").strip()
+    m = re.match(r"(.+?[.!?])(\s|$)", t)
+    t = m.group(1) if m else t
+    return t if len(t) <= n else t[:n - 1].rstrip() + "…"
+
+
+ARROW = '<svg class="go" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>'
+
+
+def sheet(sid, title, inner):
+    return (f'<section class="sheet" id="{sid}" role="dialog" aria-modal="true" aria-labelledby="{sid}-t" hidden>'
+            f'<div class="sheet-bar"><button class="sheet-x" type="button" aria-label="Close">'
+            f'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>'
+            f'<h2 id="{sid}-t">{title}</h2><span></span></div><div class="sheet-body">{inner}</div></section>')
+
+
+def tile_btn(sid, label, meta, body, wide=False):
+    return (f'<button class="sum{" wide" if wide else ""}" type="button" data-open="{sid}">'
+            f'<div class="sum-h"><span class="sum-l">{label}</span>{ARROW}</div>{body}'
+            f'<div class="sum-m">{meta}</div></button>')
+
+
 def day_body(rec, root):
     e = html.escape
     note = '<p class="note">Sample numbers (demo mode), not real market data.</p>' if rec.get("demo") else ""
@@ -992,73 +1071,124 @@ def day_body(rec, root):
     if not d:  # older days saved before the redesign
         return (f'{note}<section class="hero"><div class="eyebrow">Morning brief</div><h1>Today\'s markets</h1>'
                 f'{player_html(rec, root)}</section>{markets_html(rec["nums"])}'
-                f'<section class="sec"><div class="card">{md_to_html(rec["written"])}</div></section>')
+                f'<section class="sec"><div class="card md">{md_to_html(rec["written"])}</div></section>')
 
+    nums = rec["nums"]
     hero = (f'<section class="hero"><div class="eyebrow">Morning brief</div><h1>{e(d.get("headline", ""))}</h1>'
             f'<p class="mood">{e(d.get("mood", ""))}</p>{player_html(rec, root)}</section>')
 
+    tiles, sheets = [], []
+
+    # Markets: three headline numbers on the tile, every number in the sheet
+    chips = []
+    for name in ["S&P 500", "TSX", "WTI oil ($/bbl)", "US 10Y yield"]:
+        dd = nums.get(name)
+        if dd is None or len(chips) == 3:
+            continue
+        _, chip = _chg(dd)
+        short = {"WTI oil ($/bbl)": "Oil", "US 10Y yield": "US 10Y"}.get(name, dd.get("label", name).split(" (")[0])
+        chips.append(f'<span class="mini"><b>{e(short)}</b>{chip}</span>')
+    tiles.append(tile_btn("markets", "Markets", "12 markets · tap for all", f'<div class="minis">{"".join(chips)}</div>', wide=True))
+    sheets.append(sheet("markets", "Markets", markets_html(nums).replace(' reveal"', '"')))
+
+    # What moved
     stories = d.get("stories", [])
-    cards = []
-    for i, st in enumerate(stories, 1):
-        cards.append(
-            f'<article class="story"><div class="top"><span class="tag">{e(st.get("tag", "Markets"))}</span>'
-            f'<span class="count">{i} of {len(stories)}</span></div>'
-            f'<h3>{e(st.get("title", ""))}</h3>'
-            f'<div><div class="lbl">Why it matters</div><p>{e(st.get("why_matters", ""))}</p></div>'
-            f'<div class="why" id="why{i}"><div><div class="lbl">Why it happened</div><p>{e(st.get("why_happened", ""))}</p></div></div>'
-            f'<button class="more" type="button" aria-expanded="false" aria-controls="why{i}">Why it happened</button></article>')
-    dots = "".join(f'<span class="{"on" if i == 0 else ""}"></span>' for i in range(len(stories))) if len(stories) > 1 else ""
-    moved = (f'<section class="sec reveal" aria-label="What moved"><div class="sech"><h2>What moved</h2>'
-             f'<span>{"Swipe" if len(stories) > 1 else ""}</span></div><div class="cards">{"".join(cards)}</div>'
-             f'<div class="dots" aria-hidden="true">{dots}</div></section>') if stories else ""
+    if stories:
+        top = stories[0]
+        tiles.append(tile_btn("moved", "What moved",
+                              f'{len(stories)} {"story" if len(stories) == 1 else "stories"}',
+                              f'<span class="tag">{e(top.get("tag", "Markets"))}</span><p class="sum-t">{e(top.get("title", ""))}</p>'))
+        blocks = []
+        for i, st in enumerate(stories, 1):
+            blocks.append(f'<article class="story-full"><div class="top"><span class="tag">{e(st.get("tag", "Markets"))}</span>'
+                          f'<span class="count">{i} of {len(stories)}</span></div><h3>{e(st.get("title", ""))}</h3>'
+                          f'<div class="lbl">Why it happened</div><p>{e(st.get("why_happened", ""))}</p>'
+                          f'<div class="lbl">Why it matters</div><p>{e(st.get("why_matters", ""))}</p></article>')
+        sheets.append(sheet("moved", "What moved", "".join(blocks)))
 
-    dl = []
-    for x in d.get("deals", []):
-        target = f'<span class="arrow">→</span>{e(x["target"])}' if x.get("target") else ""
-        dl.append(f'<article class="deal"><div class="row"><span class="dtype">{e(x.get("type", "Deal"))}</span>'
-                  f'<span class="dval">{e(x.get("value", "Undisclosed"))}</span></div>'
-                  f'<div class="parties">{e(x.get("buyer", ""))}{target}</div><p>{e(x.get("why", ""))}</p></article>')
-    deals = (f'<section class="sec reveal" aria-label="Deals"><div class="sech"><h2>Deals</h2><span>M&amp;A and capital markets</span></div>'
-             f'<div class="deals">{"".join(dl)}</div></section>') if dl else ""
+    # Deals
+    deals = d.get("deals", [])
+    if deals:
+        x = deals[0]
+        who = e(x.get("buyer", "")) + (f' <span class="arrow">→</span> {e(x["target"])}' if x.get("target") else "")
+        tiles.append(tile_btn("deals", "Deals", f'{len(deals)} {"deal" if len(deals) == 1 else "deals"}',
+                              f'<span class="dtype">{e(x.get("type", "Deal"))} · {e(x.get("value", ""))}</span><p class="sum-t">{who}</p>'))
+        dl = []
+        for x in deals:
+            target = f'<span class="arrow">→</span>{e(x["target"])}' if x.get("target") else ""
+            dl.append(f'<article class="deal"><div class="row"><span class="dtype">{e(x.get("type", "Deal"))}</span>'
+                      f'<span class="dval">{e(x.get("value", "Undisclosed"))}</span></div>'
+                      f'<div class="parties">{e(x.get("buyer", ""))}{target}</div><p>{e(x.get("why", ""))}</p></article>')
+        sheets.append(sheet("deals", "Deals", f'<div class="deals">{"".join(dl)}</div>'))
 
+    # Coming up
+    cal = d.get("calendar", [])
+    if cal:
+        c0 = cal[0]
+        body = f'<span class="when">{e(c0.get("time", ""))}</span><p class="sum-t">{e(c0.get("event", ""))}</p>'
+        meta = f'+{len(cal) - 1} more' if len(cal) > 1 else "Today"
+    else:
+        body = f'<p class="sum-t">{e(d.get("calendar_note") or "Nothing major on the calendar today.")}</p>'
+        meta = "Today"
+    tiles.append(tile_btn("coming", "Coming up", meta, body))
     evs = "".join(f'<div class="ev"><div class="t">{e(c.get("time", ""))}</div><div><div class="e">{e(c.get("event", ""))}</div>'
-                  f'<div class="w">{e(c.get("why", ""))}</div></div></div>' for c in d.get("calendar", []))
-    if not evs:
-        evs = f'<div class="empty">{e(d.get("calendar_note") or "Nothing major on the calendar today.")}</div>'
-    coming = f'<section class="sec reveal" aria-label="Coming up"><div class="sech"><h2>Coming up today</h2></div><div class="timeline">{evs}</div></section>'
+                  f'<div class="w">{e(c.get("why", ""))}</div></div></div>' for c in cal) or \
+        f'<div class="empty">{e(d.get("calendar_note") or "Nothing major on the calendar today.")}</div>'
+    sheets.append(sheet("coming", "Coming up today", f'<div class="timeline">{evs}</div>'))
 
-    can = "".join(f"<li>{e(x)}</li>" for x in d.get("canada", []))
-    canada = (f'<section class="sec reveal" aria-label="Canada desk"><div class="sech"><h2>Canada desk</h2></div>'
-              f'<div class="canada"><ul>{can}</ul></div></section>') if can else ""
+    # Canada desk
+    can = d.get("canada", [])
+    if can:
+        tiles.append(tile_btn("canada", "Canada desk", f'{len(can)} points', f'<p class="sum-t sm">{e(_first_sentence(can[0], 110))}</p>'))
+        sheets.append(sheet("canada", "Canada desk", '<div class="canada"><ul>' + "".join(f"<li>{e(x)}</li>" for x in can) + "</ul></div>"))
 
-    take = d.get("takeaway", "")
-    take_clean = re.sub(r"^\s*If someone asks you about markets today:\s*", "", take, flags=re.I)
-    take_clean = take_clean[:1].upper() + take_clean[1:]
-    lines = [("ib", "IB & Markets", take_clean),
-             ("consulting", "Consulting", d.get("takeaway_consulting", "")),
-             ("accounting", "Accounting", d.get("takeaway_accounting", ""))]
-    lines = [x for x in lines if x[2]]
-    line = ""
+    # Interview line (one per track)
+    take = re.sub(r"^\s*If someone asks you about markets today:\s*", "", d.get("takeaway", ""), flags=re.I)
+    take = take[:1].upper() + take[1:]
+    lines = [x for x in [("ib", "IB & Markets", take), ("consulting", "Consulting", d.get("takeaway_consulting", "")),
+                         ("accounting", "Accounting", d.get("takeaway_accounting", ""))] if x[2]]
     if lines:
+        prev = "".join(f'<p class="sum-t sm lprev" data-k="{k}"{"" if i == 0 else " hidden"}>{e(_first_sentence(t, 120))}</p>'
+                       for i, (k, _, t) in enumerate(lines))
+        tiles.append(tile_btn("line", "Interview line", "Copy or practice", prev, wide=True))
         seg = "".join(f'<button type="button" class="lseg" data-k="{k}" aria-pressed="{"true" if i == 0 else "false"}">{lab}</button>'
                       for i, (k, lab, _) in enumerate(lines)) if len(lines) > 1 else ""
-        quotes = "".join(f'<blockquote class="lq" data-k="{k}"{"" if i == 0 else " hidden"}>{e(txt)}</blockquote>'
-                         for i, (k, _, txt) in enumerate(lines))
-        line = (f'<section class="sec reveal" aria-label="Your interview line"><div class="line"><div class="eyebrow">Your interview line</div>'
-                f'{f"<div class=lsegs role=group aria-label=Track>{seg}</div>" if seg else ""}{quotes}<div class="acts">'
-                f'<button class="lbtn a" type="button" id="copyline">Copy</button>'
-                f'<a class="lbtn b" href="{root}learn.html">Practice in Learn</a></div></div></section>')
+        quotes = "".join(f'<blockquote class="lq" data-k="{k}"{"" if i == 0 else " hidden"}>{e(t)}</blockquote>'
+                         for i, (k, _, t) in enumerate(lines))
+        sheets.append(sheet("line", "Your interview line",
+                            f'<div class="line">{f"<div class=lsegs role=group aria-label=Track>{seg}</div>" if seg else ""}{quotes}'
+                            f'<div class="acts"><button class="lbtn a" type="button" id="copyline">Copy</button>'
+                            f'<a class="lbtn b" href="{root}learn.html">Practice in Learn</a></div></div>'))
 
+    # Sources
     srcs = "".join(f'<li><a href="{e(x.get("url", ""))}" rel="noopener" target="_blank">{e(x.get("title") or "Source")}</a></li>'
                    for x in d.get("sources", []) if str(x.get("url", "")).startswith("http"))
-    sources = f'<details class="src"><summary>Sources ({len(d.get("sources", []))})</summary><ol>{srcs}</ol></details>' if srcs else ""
+    src_link = ""
+    if srcs:
+        src_link = f'<button class="srcbtn" type="button" data-open="sources">Sources ({srcs.count("<li>")})</button>'
+        sheets.append(sheet("sources", "Sources", f'<ol class="srclist">{srcs}</ol>'))
 
-    return note + hero + markets_html(rec["nums"]) + moved + deals + coming + canada + line + sources
+    grid = (f'<section class="sec reveal" aria-label="Today\'s sections"><div class="sech"><h2>Today\'s brief</h2>'
+            f'<span>Tap a section to read more</span></div><div class="sums">{"".join(tiles)}</div>{src_link}</section>')
+    return note + hero + grid + "".join(sheets)
 
 
 def short_date(iso):
     return dt.date.fromisoformat(iso).strftime("%a, %b %-d")
 
+
+NETWORK_BODY = """
+<section class="hero"><div class="eyebrow">Network</div><h1>Compete, compare and keep each other going</h1>
+<p class="mood">Leagues, school and club rankings, friend streaks and a daily market call. Arriving with accounts.</p></section>
+<section class="sec reveal"><div class="sech"><h2>What's coming</h2></div>
+<div class="netlist">
+<div class="net"><span class="ni">1</span><div><h3>Weekly leagues</h3><p>Earn XP from lessons and climb a weekly leaderboard. Top finishers move up a division.</p></div></div>
+<div class="net"><span class="ni">2</span><div><h3>School and club rankings</h3><p>See how your school and your club stack up, from Laurier vs. Ivey to your case team vs. the accounting association.</p></div></div>
+<div class="net"><span class="ni">3</span><div><h3>Daily market call</h3><p>Ten seconds a day: will the S&amp;P or oil close up or down? Build your accuracy score.</p></div></div>
+<div class="net"><span class="ni">4</span><div><h3>Friend streaks</h3><p>Keep a learning streak going with friends and see who's falling behind.</p></div></div>
+<div class="net"><span class="ni">5</span><div><h3>Clubs</h3><p>Club leaders can create a group, run challenges and track members' progress.</p></div></div>
+</div></section>
+"""
 
 def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
     import json
@@ -1101,6 +1231,10 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
         page(SITE_NAME, day_body(latest, ""), "", "today").replace("{datepill}", pill(short_date(latest["iso"]))),
         encoding="utf-8")
 
+    (site_dir / "network.html").write_text(
+        page(f"{SITE_NAME}: Network", NETWORK_BODY, "", "network").replace("{datepill}", pill("Coming soon")),
+        encoding="utf-8")
+
     items = []
     for r in records:
         head = (r.get("data") or {}).get("headline") or "Morning brief"
@@ -1113,7 +1247,7 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
     print(f"  website updated ({len(records)} days)")
 
 
-BRIEF_VERSION = "2026-11-08a"
+BRIEF_VERSION = "2026-11-08b"
 
 
 def main():
