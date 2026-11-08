@@ -142,16 +142,39 @@ label.lbl{display:block;font-size:13px;font-weight:700;color:var(--muted);margin
 footer{color:var(--muted);font-size:12px;margin-top:28px;text-align:center}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:40}
 
-/* the bull: eyes change colour with mood */
+/* the bull: friendly faces for each mood */
 .bull{--eye:#3DDC97;overflow:visible}
 .bull .eye{fill:var(--eye);transition:fill .2s}
-.bull .glow{fill:var(--eye);opacity:.0;transition:opacity .25s}
-.bull.happy{--eye:#3DDC97;animation:nod .55s cubic-bezier(.2,1.4,.4,1)}
-.bull.happy .glow,.bull.wow .glow{opacity:.35}
-.bull.wow{--eye:#7FF0C0}
-.bull.sad{--eye:#FF8A5C;animation:shake .45s}
+.bull .eyeh,.bull .brows,.bull .m-sad,.bull .m-o{display:none}
+.bull.happy .eyeo{display:none}.bull.happy .eyeh{display:inline}
+.bull.happy{animation:nod .55s cubic-bezier(.2,1.4,.4,1)}
+.bull.wow .m-smile{display:none}.bull.wow .m-o{display:inline}
+.bull.sad .m-smile{display:none}.bull.sad .m-sad,.bull.sad .brows{display:inline}
+.bull.sad{animation:shake .45s}
 .bull.idle{animation:breathe 4s ease-in-out infinite}
+.bull.idle .eyeo{animation:blink 5s infinite;transform-origin:60px 55px}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
 
+/* lesson intro */
+.intro{position:fixed;inset:0;z-index:45;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;cursor:pointer;animation:fadein .25s ease}
+.intro .im{width:130px;animation:bob 1.4s ease-in-out infinite}
+.intro .iu{margin-top:18px;font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--c,#3DDC97)}
+.intro .it{font-size:26px;font-weight:800;letter-spacing:-.6px;line-height:1.2;margin:6px 0 6px;max-width:420px}
+.intro .is{font-size:14px;color:var(--muted);margin:0 0 26px}
+.intro .ibar{width:220px;height:8px;border-radius:999px;background:var(--card2);overflow:hidden;border:1px solid var(--line)}
+.intro .ibar>div{height:100%;width:0;background:var(--c,#3DDC97);border-radius:999px;animation:fill 1.5s cubic-bezier(.4,0,.2,1) forwards}
+.intro .itip{margin-top:18px;font-size:13px;color:#C6CCD6;max-width:300px;min-height:20px}
+@keyframes fill{to{width:100%}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+
+/* quit dialog */
+.modal-bg{position:fixed;inset:0;z-index:60;background:rgba(5,7,10,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;animation:fadein .2s ease}
+.modal{width:100%;max-width:520px;background:var(--card);border:1px solid var(--line2);border-radius:24px 24px 0 0;padding:20px 18px calc(22px + env(safe-area-inset-bottom));text-align:center;animation:slideup .28s cubic-bezier(.2,.8,.2,1)}
+.modal .mm{width:84px;margin:0 auto 6px}
+.modal h2{font-size:22px;letter-spacing:-.4px;margin:4px 0 6px}
+.modal p{color:var(--muted);font-size:15px;margin:0 0 18px}
+.modal .stack{display:flex;flex-direction:column;gap:10px}
+.btn.leave{background:transparent;color:var(--red);box-shadow:none;border:1px solid rgba(255,107,94,.35)}
 @keyframes pulse{0%{transform:scale(.9);opacity:.5}100%{transform:scale(1.35);opacity:0}}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -238,17 +261,29 @@ const ICON={
   mute:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg>'
 };
 function bull(mood){
-  return svg(`<svg class="bull ${mood||"idle"}" viewBox="0 0 120 112" role="img" aria-label="The Leveraged bull">
-  <path d="M36 36C20 33 10 22 12 6c6 12 15 18 28 19z" fill="#E9EDF2"/>
-  <path d="M84 36c16-3 26-14 24-30-6 12-15 18-28 19z" fill="#E9EDF2"/>
-  <path d="M28 44 13 40l10 12z" fill="#2A3240"/>
-  <path d="M92 44l15-4-10 12z" fill="#2A3240"/>
-  <path d="M40 26h40c9 0 15 7 15 16v14c0 22-15 44-35 44S25 78 25 56V42c0-9 6-16 15-16z" fill="#1A202B" stroke="#3A4556" stroke-width="2"/>
-  <ellipse class="glow" cx="47" cy="54" rx="9" ry="5"/><ellipse class="glow" cx="73" cy="54" rx="9" ry="5"/>
-  <path class="eye" d="M39 50l15 4-12 3z"/><path class="eye" d="M81 50l-15 4 12 3z"/>
-  <rect x="45" y="72" width="30" height="22" rx="11" fill="#2A3240"/>
-  <circle cx="53" cy="83" r="2.6" fill="#0A0D12"/><circle cx="67" cy="83" r="2.6" fill="#0A0D12"/>
-  <circle class="ring" cx="60" cy="98" r="6" fill="none" stroke="#3DDC97" stroke-width="2.6"/>
+  return svg(`<svg class="bull ${mood||"idle"}" viewBox="0 0 120 112" role="img" aria-label="Lev, the Leveraged bull">
+  <path d="M34 34c-12-2-19-10-18-22 5 7 12 11 22 12" fill="none" stroke="#E9EDF2" stroke-width="7" stroke-linecap="round"/>
+  <path d="M86 34c12-2 19-10 18-22-5 7-12 11-22 12" fill="none" stroke="#E9EDF2" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="22" cy="48" rx="10" ry="6.5" fill="#3A4556" transform="rotate(-18 22 48)"/>
+  <ellipse cx="98" cy="48" rx="10" ry="6.5" fill="#3A4556" transform="rotate(18 98 48)"/>
+  <rect x="26" y="24" width="68" height="78" rx="32" fill="#232B38" stroke="#3A4556" stroke-width="2"/>
+  <path d="M52 27c3 4 13 4 16 0" fill="none" stroke="#3DDC97" stroke-width="3" stroke-linecap="round"/>
+  <g class="eyeo">
+    <circle cx="46" cy="55" r="7.5" fill="#F3F5F8"/><circle class="eye" cx="47" cy="56" r="4.6"/><circle cx="47" cy="56" r="2.2" fill="#0A0D12"/><circle cx="48.6" cy="54.2" r="1.3" fill="#fff"/>
+    <circle cx="74" cy="55" r="7.5" fill="#F3F5F8"/><circle class="eye" cx="75" cy="56" r="4.6"/><circle cx="75" cy="56" r="2.2" fill="#0A0D12"/><circle cx="76.6" cy="54.2" r="1.3" fill="#fff"/>
+  </g>
+  <g class="eyeh" fill="none" stroke="#3DDC97" stroke-width="3.2" stroke-linecap="round">
+    <path d="M39 57c3-5 11-5 14 0"/><path d="M67 57c3-5 11-5 14 0"/>
+  </g>
+  <g class="brows" fill="none" stroke="#9AA3B2" stroke-width="2.6" stroke-linecap="round">
+    <path d="M39 44l12-3"/><path d="M81 44l-12-3"/>
+  </g>
+  <rect x="42" y="70" width="36" height="24" rx="12" fill="#3A4556"/>
+  <circle cx="52" cy="80" r="2.6" fill="#0A0D12"/><circle cx="68" cy="80" r="2.6" fill="#0A0D12"/>
+  <path class="m-smile" d="M54 87c3 3 9 3 12 0" fill="none" stroke="#0A0D12" stroke-width="2.4" stroke-linecap="round"/>
+  <path class="m-sad" d="M54 89c3-3 9-3 12 0" fill="none" stroke="#0A0D12" stroke-width="2.4" stroke-linecap="round"/>
+  <ellipse class="m-o" cx="60" cy="88" rx="3.2" ry="2.8" fill="#0A0D12"/>
+  <circle cx="34" cy="68" r="4" fill="#3DDC97" opacity=".18"/><circle cx="86" cy="68" r="4" fill="#3DDC97" opacity=".18"/>
   </svg>`);
 }
 function setMood(node,mood){ if(!node) return; node.classList.remove("idle","happy","sad","wow","neutral"); void node.getBoundingClientRect(); node.classList.add(mood); }
@@ -361,7 +396,7 @@ function home(keepScroll){
         onclick:(ev)=>{
           if(state==="locked"){ sfx.wrong(); const n=ev.currentTarget; n.classList.remove("nope"); void n.offsetWidth; n.classList.add("nope");
             toast("Finish \u201c"+u.lessons[i-1].title+"\u201d first"); return; }
-          sfx.tap(); startLesson(u,l,c,cd); },html:icon});
+          sfx.tap(); lessonIntro(u,l,c,cd); },html:icon});
       const w=el("div",{class:"node-wrap",style:`transform:translateX(${off}px)`},
         isGlobalNext?el("div",{class:"bubble","aria-hidden":"true"},done===0&&ui===0?"START":"NEXT UP"):null,
         btn, el("div",{class:"node-label"+(state==="open"?" cur":"")+(state==="locked"?" locked":"")},l.title));
@@ -378,7 +413,40 @@ function home(keepScroll){
 
 // ---------- lesson ----------
 let L=null;
+const TIPS=["Questions you miss come back at the end.","First-try answers earn 10 XP.","Finish this lesson to unlock the next one.","Stuck? Tap \u201cNeed a hint?\u201d","Say the 'out loud' answers out loud. It helps."];
+let inLesson=false;
+function lessonIntro(u,l,c,cd){
+  const n=l.questions.length, mins=Math.max(2,Math.round(n*0.6));
+  const ov=el("div",{class:"intro",style:`--c:${c}`,role:"status","aria-live":"polite"},
+    el("div",{class:"im"},bull("wow")),
+    el("div",{class:"iu"},(u.label||("Unit "+u.unit))),
+    el("div",{class:"it"},l.title),
+    el("div",{class:"is"},n+" questions · about "+mins+" min"),
+    el("div",{class:"ibar","aria-hidden":"true"},el("div",{})),
+    el("div",{class:"itip"},TIPS[Math.floor(Math.random()*TIPS.length)]));
+  let gone=false;
+  const go=()=>{ if(gone) return; gone=true; ov.remove(); startLesson(u,l,c,cd); };
+  ov.addEventListener("click",go);
+  document.body.append(ov);
+  setTimeout(go, reduceMotion?400:1600);
+}
+function confirmQuit(){
+  if(document.querySelector(".modal-bg")) return;
+  const close=()=>bg.remove();
+  const bg=el("div",{class:"modal-bg",onclick:(e)=>{ if(e.target===bg) close(); }},
+    el("div",{class:"modal",role:"alertdialog","aria-modal":"true","aria-labelledby":"qt","aria-describedby":"qd"},
+      el("div",{class:"mm"},bull("sad")),
+      el("h2",{id:"qt"},"Leave this lesson?"),
+      el("p",{id:"qd"},"You'll lose your progress in this lesson, including any XP earned so far."),
+      el("div",{class:"stack"},
+        el("button",{class:"btn",type:"button",onclick:()=>{sfx.tap();close();}},"Keep learning"),
+        el("button",{class:"btn leave",type:"button",onclick:()=>{close();inLesson=false;L=null;home();}},"Leave lesson"))));
+  document.body.append(bg);
+  bg.querySelector(".btn").focus();
+}
+window.addEventListener("popstate",()=>{ if(inLesson){ history.pushState({lesson:1},""); confirmQuit(); } });
 function startLesson(u,l,c,cd){
+  if(!inLesson){ inLesson=true; history.pushState({lesson:1},""); }
   L={u,l,c,cd,queue:l.questions.map(q=>({q,tries:0})),total:l.questions.length,doneCount:0,firstTry:0,xp:0,combo:0,best:0,picked:null,checked:false,t0:Date.now()};
   renderQ();
 }
@@ -389,7 +457,7 @@ function renderQ(){
   const combo=el("div",{class:"combo","aria-live":"polite"}, L.combo>=2?[svg(ICON.flame),String(L.combo)]:"");
   combo.querySelector&&combo.querySelector("svg")&&combo.querySelector("svg").setAttribute("style","width:18px;height:18px");
   app.replaceChildren(el("div",{class:"top"},
-    el("button",{class:"x",type:"button","aria-label":"Quit lesson",onclick:()=>home(),html:ICON.x}),
+    el("button",{class:"x",type:"button","aria-label":"Quit lesson",onclick:()=>confirmQuit(),html:ICON.x}),
     el("div",{class:"prog",role:"progressbar","aria-label":"Lesson progress","aria-valuemin":"0","aria-valuemax":String(L.total),"aria-valuenow":String(L.doneCount)},
       el("div",{style:`width:${Math.max(4,Math.round(L.doneCount/L.total*100))}%`})),
     combo));
@@ -457,7 +525,7 @@ function next(right){
   if(L.queue.length) renderQ(); else finish();
 }
 function finish(){
-  app.classList.remove('lesson-pad');
+  app.classList.remove('lesson-pad'); inLesson=false;
   const bonus=20; L.xp+=bonus;
   const before=dailyXP(); addXP(L.xp); S.done[L.l.id]=true; const newDay=bumpStreak(); save();
   const acc=Math.round(L.firstTry/L.total*100);
