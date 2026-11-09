@@ -2,7 +2,10 @@ name: Daily morning brief
 
 on:
   schedule:
-    - cron: "45 10 * * 1-5"
+    # 11 AM Toronto time year-round: 16:00 UTC in winter, 15:00 UTC in summer.
+    # Both run; the first step skips whichever one isn't 11 AM in Toronto.
+    - cron: "0 15 * * 1-5"
+    - cron: "0 16 * * 1-5"
   workflow_dispatch: {}
 
 permissions:
@@ -12,12 +15,26 @@ jobs:
   brief:
     runs-on: ubuntu-latest
     steps:
+      - name: Check it's 11 AM in Toronto
+        id: gate
+        run: |
+          H=$(TZ=America/Toronto date +%H)
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$H" != "11" ]; then
+            echo "It's ${H}:00 in Toronto, not 11. Skipping this run."
+            echo "go=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=yes" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@v4
+        if: steps.gate.outputs.go == 'yes'
       - uses: actions/setup-python@v5
+        if: steps.gate.outputs.go == 'yes'
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
+        if: steps.gate.outputs.go == 'yes'
       - run: python brief.py
+        if: steps.gate.outputs.go == 'yes'
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
@@ -29,6 +46,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
       - name: Publish website
+        if: steps.gate.outputs.go == 'yes'
         run: |
           git config user.name "morning-brief-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -36,6 +54,7 @@ jobs:
           git commit -m "Brief for $(date -u +%F)" || echo "Nothing new to publish"
           git push
       - uses: actions/upload-artifact@v4
+        if: steps.gate.outputs.go == 'yes'
         with:
           name: brief
           path: briefs/
