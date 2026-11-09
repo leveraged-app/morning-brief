@@ -112,6 +112,19 @@ def boc_latest_two(series_id):
     return float(obs[0][series_id]["v"]), float(obs[1][series_id]["v"]), obs[0]["d"]
 
 
+# Live quotes tried at run time (first one that works wins). ETFs are backups when
+# the free plan doesn't include an index; the % change tracks the index closely.
+LIVE_SYMBOLS = {
+    "S&P 500": [("^GSPC", "S&P 500"), ("SPY", "S&P 500 (via SPY)")],
+    "Nasdaq": [("^IXIC", "Nasdaq"), ("QQQ", "Nasdaq 100 (via QQQ)")],
+    "VIX": [("^VIX", "VIX")],
+    "WTI oil ($/bbl)": [("CLUSD", "WTI oil ($/bbl)"), ("USO", "Oil (via USO)")],
+    "Natural gas ($/MMBtu)": [("NGUSD", "Natural gas ($/MMBtu)")],
+    "USD/CAD": [("USDCAD", "USD/CAD")],
+}
+LIVE_KIND = {"USD/CAD": "fx", "VIX": "index", "S&P 500": "index", "Nasdaq": "index"}
+
+
 def fmp_quote(symbol, key):
     r = requests.get(
         "https://financialmodelingprep.com/stable/quote",
@@ -165,6 +178,26 @@ def get_numbers(demo=False):
             except Exception as e:
                 print(f"  ! {name} ({sym}): {e}", file=sys.stderr)
 
+    # Live quotes (as of the run time) replace the daily closes where the FMP plan allows.
+    if fmp_key:
+        for name, choices in LIVE_SYMBOLS.items():
+            for sym, label in choices:
+                try:
+                    v, p, d = fmp_quote(sym, fmp_key)
+                    if v <= 0 or p <= 0:
+                        raise RuntimeError("empty quote")
+                    kind = (out.get(name) or {}).get("kind") or LIVE_KIND.get(name, "price")
+                    out[name] = {"value": v, "prev": p, "kind": kind, "asof": d, "label": label, "live": True}
+                    break
+                except Exception as e:
+                    print(f"  (live {name} via {sym} unavailable: {str(e)[:80]})", file=sys.stderr)
+    # The TSX, gold and Bitcoin quotes from FMP above are live too
+    for name in FMP_SYMBOLS:
+        if out.get(name):
+            out[name]["live"] = True
+    live = [n for n, d in out.items() if d and d.get("live")]
+    print(f"  live quotes: {', '.join(live) if live else 'none'}")
+
     return out
 
 
@@ -206,7 +239,9 @@ PROMPT = """You are writing a daily morning market brief for finance students an
 young professionals in Canada who are recruiting for investment banking,
 consulting and equity research. Today is {today}.
 
-Here are the latest closing numbers (use them exactly; never invent or change a number):
+Here are the latest market numbers, mostly live quotes as of this morning (about 11 AM ET)
+compared with the previous close; yields are the last close. Use them exactly;
+never invent or change a number:
 
 {table}
 
@@ -916,7 +951,9 @@ button{font:inherit;color:inherit}
 .panel.show .tile{animation:rise .4s cubic-bezier(.2,.8,.2,1) backwards}
 .panel.show .tile:nth-child(2){animation-delay:.05s}.panel.show .tile:nth-child(3){animation-delay:.1s}.panel.show .tile:nth-child(4){animation-delay:.15s}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
-.tile .n{font-size:13px;font-weight:600;color:var(--muted)}
+.tile .n{font-size:13px;font-weight:600;color:var(--muted);display:flex;justify-content:space-between;gap:6px;align-items:center}
+.tile .live,.tile .close{font-family:'Geist Mono',Geist,monospace;font-size:9px;font-weight:700;letter-spacing:.8px;padding:2px 5px;border-radius:5px;flex-shrink:0}
+.tile .live{color:var(--g);background:var(--upbg)}.tile .close{color:var(--muted);background:var(--card2)}
 .tile .v{font-family:'Geist Mono',Geist,monospace;letter-spacing:-.8px;font-size:24px;font-weight:700;letter-spacing:-.5px;margin:4px 0 8px;font-variant-numeric:tabular-nums}
 .chg{font-family:'Geist Mono',Geist,monospace;display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;padding:3px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
 .chg.up{color:var(--up);background:var(--upbg)}.chg.down{color:var(--down);background:var(--downbg)}.chg.na{color:var(--muted);background:var(--card2)}
@@ -1144,6 +1181,11 @@ def _chg(d):
     return fmt_value(d["value"], d["kind"]), f'<span class="chg {cls}">{chg}</span>'
 
 
+def as_of_label(nums):
+    live = any(d and d.get("live") for d in nums.values())
+    return "Live this morning · change vs. last close" if live else "At the last close"
+
+
 def markets_html(nums):
     tabs, panels = [], []
     for i, (label, names) in enumerate(MARKET_TABS):
@@ -1155,11 +1197,12 @@ def markets_html(nums):
             d = nums.get(name)
             val, chip = _chg(d)
             lab = (d or {}).get("label", name)
-            tiles.append(f'<div class="tile"><div class="n">{html.escape(lab)}</div>'
+            tag = '<span class="live">LIVE</span>' if d and d.get("live") else '<span class="close">CLOSE</span>' if d else ""
+            tiles.append(f'<div class="tile"><div class="n"><span>{html.escape(lab)}</span>{tag}</div>'
                          f'<div class="v">{val}</div>{chip}</div>')
         panels.append(f'<div class="panel{" show" if i == 0 else ""}" id="{pid}" role="tabpanel" '
                       f'aria-labelledby="t{pid}"{"" if i == 0 else " hidden"}>{"".join(tiles)}</div>')
-    return (f'<section class="sec reveal" aria-label="Markets"><div class="sech"><h2>Markets</h2><span>At the close</span></div>'
+    return (f'<section class="sec reveal" aria-label="Markets"><div class="sech"><h2>Markets</h2><span>{as_of_label(nums)}</span></div>'
             f'<div class="tabs" role="tablist" aria-label="Market groups">{"".join(tabs)}</div>{"".join(panels)}</section>')
 
 
@@ -1234,7 +1277,7 @@ def day_body(rec, root):
         _, chip = _chg(dd)
         short = {"WTI oil ($/bbl)": "Oil", "US 10Y yield": "US 10Y"}.get(name, dd.get("label", name).split(" (")[0])
         chips.append(f'<span class="mini"><b>{e(short)}</b>{chip}</span>')
-    tiles.append(tile_btn("markets", "Markets", "12 markets · tap for all", f'<div class="minis">{"".join(chips)}</div>', wide=True))
+    tiles.append(tile_btn("markets", "Markets", ("Live · " if any(x and x.get("live") for x in nums.values()) else "") + "12 markets · tap for all", f'<div class="minis">{"".join(chips)}</div>', wide=True))
     sheets.append(sheet("markets", "Markets", markets_html(nums).replace(' reveal"', '"')))
 
     # What moved
@@ -1405,7 +1448,13 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
 def resolve_market_calls(nums):
     """Score the daily market calls for the latest S&P 500 close. Needs SUPABASE_URL and SUPABASE_SERVICE_KEY."""
     url, key = os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_KEY")
-    spx = nums.get("S&P 500")
+    spx = None
+    if os.getenv("FRED_API_KEY"):
+        try:
+            v, p, d = fred_latest_two("SP500", os.getenv("FRED_API_KEY"))
+            spx = {"value": v, "prev": p, "asof": d}
+        except Exception as e:
+            print(f"  ! S&P 500 close for market calls: {e}", file=sys.stderr)
     if not (url and key):
         print("  (market calls not scored: SUPABASE_URL / SUPABASE_SERVICE_KEY not set)")
         return
@@ -1427,7 +1476,7 @@ def resolve_market_calls(nums):
         print(f"  ! market call scoring failed: {e}", file=sys.stderr)
 
 
-BRIEF_VERSION = "2026-11-08e"
+BRIEF_VERSION = "2026-11-09a"
 
 
 def main():
