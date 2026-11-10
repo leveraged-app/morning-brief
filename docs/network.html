@@ -120,6 +120,7 @@ const SB_KEY = "sb_publishable_vXGHGR5nhC8sl6qeEr0rKw_339O-zOh";
 const LOCAL_KEY = "leveraged-learn-v1";
 const SCHOOLS = ["Wilfrid Laurier (Lazaridis)","Waterloo","Western (Ivey)","Queen's (Smith)","Toronto (Rotman)","York (Schulich)","McGill (Desautels)","UBC (Sauder)","TMU (Ted Rogers)","McMaster (DeGroote)","Ottawa (Telfer)","Carleton (Sprott)","Concordia (John Molson)","Alberta","Calgary (Haskayne)","Guelph (Lang)","Brock (Goodman)","Dalhousie (Rowe)","Other"];
 const TRACKS = {ib:"IB & Markets", consulting:"Consulting", accounting:"Accounting"};
+const LEVELS = {intern:"Intern", analyst:"Analyst", partner:"Partner"};
 
 let sb = null;
 try { sb = window.supabase.createClient(SB_URL, SB_KEY, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true}}); } catch (e) { sb = null; }
@@ -202,6 +203,8 @@ async function syncLocal(){
     s.done = merged;
     s.xp = Math.max(s.xp || 0, profile.xp_total || 0);
     if (profile.track && !s.track) s.track = profile.track;
+    if (profile.level && !s.level) s.level = profile.level;
+    else if (s.level && profile.level !== s.level) { await sb.from("profiles").update({level: s.level}).eq("id", me.id); profile.level = s.level; }
     saveLocal(s);
   } catch (e) { /* not critical */ }
 }
@@ -243,6 +246,7 @@ function renderSetup(){
   document.getElementById("pill").textContent = "Set up";
   const s = local();
   let track = s.track || "ib";
+  let level = s.level || "analyst";
   const name = el("input", {class:"input", id:"dn", maxlength:"40", autocomplete:"name", placeholder:"Jack L."});
   const user = el("input", {class:"input", id:"un", maxlength:"20", autocapitalize:"none", autocomplete:"username", placeholder:"jack_l"});
   const school = el("select", {class:"input", id:"sc"}, el("option", {value:""}, "Choose your school"), SCHOOLS.map(x => el("option", {value:x}, x)));
@@ -251,6 +255,9 @@ function renderSetup(){
   const club = el("input", {class:"input", id:"cl", maxlength:"80", placeholder:"e.g. Laurier Accounting Association"});
   const trackBtns = Object.entries(TRACKS).map(([k, v]) => el("button", {class:"tr", type:"button", "aria-pressed": k === track ? "true" : "false", onclick: (e) => {
     track = k; e.currentTarget.parentNode.querySelectorAll(".tr").forEach(b => b.setAttribute("aria-pressed", b === e.currentTarget ? "true" : "false"));
+  }}, v));
+  const levelBtns = Object.entries(LEVELS).map(([k, v]) => el("button", {class:"tr", type:"button", "aria-pressed": k === level ? "true" : "false", onclick: (e) => {
+    level = k; e.currentTarget.parentNode.querySelectorAll(".tr").forEach(b => b.setAttribute("aria-pressed", b === e.currentTarget ? "true" : "false"));
   }}, v));
   user.addEventListener("input", () => { user.value = user.value.toLowerCase().replace(/[^a-z0-9_]/g, ""); });
   const err = el("div", {class:"err", role:"alert"});
@@ -263,16 +270,18 @@ function renderSetup(){
     if (!/^[a-z0-9_]{3,20}$/.test(un)) { err.textContent = "Usernames are 3-20 characters: letters, numbers or _."; return; }
     if (!sc) { err.textContent = "Choose your school so you can count toward its ranking."; return; }
     btn.disabled = true; btn.textContent = "Saving…";
-    const { error } = await sb.from("profiles").insert({id: me.id, display_name: dn, username: un, school: sc, club: club.value.trim() || null, track});
+    const { error } = await sb.from("profiles").insert({id: me.id, display_name: dn, username: un, school: sc, club: club.value.trim() || null, track, level});
     btn.disabled = false; btn.textContent = "Join the network";
     if (error) { err.textContent = error.code === "23505" ? "That username is taken. Try another." : "Couldn't save: " + error.message; return; }
-    const st = local(); st.track = track; saveLocal(st);
+    const st = local(); st.track = track; st.level = level; saveLocal(st);
     route();
   }},
     el("div", {class:"field"}, el("label", {for:"dn"}, "Name"), name, el("span", {class:"hint"}, "Shown on leaderboards.")),
     el("div", {class:"field"}, el("label", {for:"un"}, "Username"), user, el("span", {class:"hint"}, "Friends find you with this.")),
     el("div", {class:"field"}, el("label", {for:"sc"}, "School"), school, other),
     el("div", {class:"field"}, el("label", {}, "Track"), el("div", {class:"tracks", role:"group", "aria-label":"Track"}, trackBtns)),
+    el("div", {class:"field"}, el("label", {}, "Level"), el("div", {class:"tracks", role:"group", "aria-label":"Level"}, levelBtns),
+      el("span", {class:"hint"}, "Intern: new to markets · Analyst: knows the basics · Partner: deep and technical")),
     el("div", {class:"field"}, el("label", {for:"cl"}, "Club (optional)"), club),
     err, btn);
   app.replaceChildren(el("section", {class:"hero"}, el("div", {class:"eyebrow"}, "Almost there"), el("h1", {}, "Set up your profile"), form),
@@ -284,7 +293,7 @@ function renderHome(){
   document.getElementById("pill").textContent = "@" + profile.username;
   const head = el("section", {class:"hero"},
     el("div", {class:"me"}, el("div", {class:"av"}, initials(profile.display_name)),
-      el("div", {}, el("div", {class:"nm"}, profile.display_name), el("div", {class:"meta"}, [profile.school, TRACKS[profile.track]].filter(Boolean).join(" · ")))),
+      el("div", {}, el("div", {class:"nm"}, profile.display_name), el("div", {class:"meta"}, [profile.school, TRACKS[profile.track], LEVELS[profile.level]].filter(Boolean).join(" · ")))),
     el("div", {class:"stats"},
       el("div", {class:"st"}, el("div", {class:"v"}, String(liveStreak(profile))), el("div", {class:"l"}, "Day streak")),
       el("div", {class:"st"}, el("div", {class:"v"}, String(profile.xp_total)), el("div", {class:"l"}, "Total XP")),
