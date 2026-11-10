@@ -42,10 +42,27 @@ button{font:inherit;color:inherit}
 .tc-desc{font-size:14px;color:#C6CCD6}
 .tc-meta{font-size:12px;color:var(--muted);font-weight:600}
 .tc-go{color:var(--muted);display:flex}
-.chips{display:flex;gap:8px;flex-wrap:wrap}
+.lchips{display:flex;gap:8px;flex-wrap:wrap}
 .lvbadge{margin-left:8px;font-size:10px;font-weight:800;letter-spacing:.8px;padding:2px 7px;border-radius:999px;background:var(--card2);border:1px solid var(--line2);color:var(--muted);vertical-align:1px}
 .lvbadge.lv-intern,.tc-icon.lv-intern{color:#6EA8FF}.lvbadge.lv-analyst,.tc-icon.lv-analyst{color:var(--g)}.lvbadge.lv-partner,.tc-icon.lv-partner{color:var(--gold)}
-.unit-banner.above{opacity:.6}
+.unit-banner.review{opacity:.85}
+.appbar{display:flex;align-items:center;justify-content:space-between}
+.gear{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);display:flex;align-items:center;justify-content:center;text-decoration:none}
+.gear:hover{color:var(--ink)}
+a.track-chip{text-decoration:none}
+.review-toggle{display:flex;align-items:center;gap:12px;width:100%;text-align:left;margin:18px 0 4px;padding:14px 16px;border-radius:18px;border:1px dashed var(--line2);background:transparent;cursor:pointer}
+.rt-b{flex:1;display:flex;flex-direction:column}.rt-t{font-weight:800}.rt-s{font-size:13px;color:var(--muted)}
+.rt-c{display:flex;color:var(--muted);transition:transform .2s}.rt-c.open{transform:rotate(180deg)}
+.lvl-divider{display:flex;align-items:center;gap:12px;margin:28px 0 4px;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase}
+.lvl-divider::before,.lvl-divider::after{content:"";flex:1;height:1px;background:var(--line2)}
+.teaser{display:flex;align-items:center;gap:14px;margin:26px 0 6px;padding:16px;border-radius:20px;border:1px solid var(--line2);background:linear-gradient(135deg,var(--card),var(--card2));color:var(--ink);text-decoration:none}
+.teaser .tc-icon{width:44px;height:44px;border-radius:13px;background:var(--card2);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.teaser .tc-icon svg{width:22px;height:22px}
+.tz-b{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.tz-t{font-weight:800;font-size:17px;display:flex;align-items:center;gap:6px}
+.tz-lock{display:flex;color:var(--muted)}.tz-lock svg{width:15px;height:15px}
+.tz-s{font-size:13px;color:#C6CCD6}.tz-go{font-size:13px;font-weight:700;color:var(--g);margin-top:4px}
+.teaser .tc-go{color:var(--muted);display:flex}
+.empty-lvl{margin:22px 0;padding:16px;border-radius:16px;background:var(--card);border:1px solid var(--line);color:var(--muted);font-size:14px}
 /* top stats */
 .stats{display:flex;align-items:center;gap:8px;margin:10px 0 4px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
 .stat{font-family:'Geist Mono',Geist,monospace;display:flex;align-items:center;gap:6px;font-weight:800;font-size:15px;padding:7px 11px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-variant-numeric:tabular-nums}
@@ -348,7 +365,8 @@ function toast(text){const t=el("div",{class:"toast",role:"status"},text);docume
 // ---------- shared header ----------
 function header(){
   return el("div",{class:"appbar"},el("div",{class:"brand2"},
-    el("span",{class:"logo","aria-hidden":"true",html:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg>'}),"Leveraged"));
+    el("span",{class:"logo","aria-hidden":"true",html:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg>'}),"Leveraged"),
+    el("a",{class:"gear",href:"settings.html","aria-label":"Settings",html:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'}));
 }
 function tabbar(){
   const I={today:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
@@ -441,54 +459,79 @@ function trackPicker(){
 
 // ---------- home: the path ----------
 const OFFS=[0,62,92,62,0,-62,-92,-62];
+let showEarlier=false;
+const CHEV_R='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 function home(keepScroll){
   if(!S.track){ trackPicker(); return; }
   if(!S.level){ levelPicker(); return; }
   const y=window.scrollY; app.classList.remove('lesson-pad');
-  const t=TRACKS[S.track], lv=LEVELS[S.level]||LEVELS.analyst;
-  const CHEV='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+  const t=TRACKS[S.track], lv=LEVELS[S.level]||LEVELS.analyst, myRank=lvlRank(S.level);
   app.replaceChildren(header(), statsBar(),
-    el("div",{class:"chips"},
-      el("button",{class:"track-chip",type:"button","aria-label":"Track: "+t.name+". Change track",onclick:()=>{sfx.tap();trackPicker()}},
-        el("span",{class:"tcc-i",html:t.icon}),el("span",{},t.name),el("span",{class:"tcc-c",html:CHEV})),
-      el("button",{class:"track-chip",type:"button","aria-label":"Level: "+lv.name+". Change level",onclick:()=>{sfx.tap();levelPicker()}},
-        el("span",{class:"tcc-i",html:LVL_ICON[S.level]||LVL_ICON.analyst}),el("span",{},lv.name),el("span",{class:"tcc-c",html:CHEV}))));
-  let curSet=false, nodeIndex=0, curNode=null;
-  unitsFor(S.track).forEach((u,ui)=>{
-    const [c,cd]=UNIT_COLORS[ui%UNIT_COLORS.length];
-    const done=u.lessons.filter(l=>S.done[l.id]).length;
-    const above = lvlRank(u.level) > lvlRank(S.level);
-    app.append(el("div",{class:"unit-banner"+(above?" above":""),style:`--uc:${c}`},
-      el("div",{},el("div",{class:"u"},(u.label||("Unit "+u.unit)).toUpperCase(), el("span",{class:"lvbadge lv-"+(u.level||"analyst")},(LEVELS[u.level]||LEVELS.analyst).name)),el("div",{class:"n"},u.title)),
-      el("div",{class:"c"},above?"Locked":done+" / "+u.lessons.length)));
-    const path=el("div",{class:"path",style:`--c:${c};--cd:${cd}`});
-    u.lessons.forEach((l,i)=>{
-      const isDone=!!S.done[l.id];
-      const unlocked = !above && (i===0 || !!S.done[u.lessons[i-1].id]);   // first lesson open; others need the one before; above-level units locked
-      let state = isDone ? "done" : unlocked ? "open" : "locked";
-      const isGlobalNext = state==="open" && !curSet; if(isGlobalNext) curSet=true;
-      const off=OFFS[nodeIndex%OFFS.length]; nodeIndex++;
-      const cls = state==="done" ? "done" : state==="open" ? "cur" : "todo";
-      const icon = state==="done" ? ICON.check : state==="open" ? ICON.play : ICON.lock;
-      const label = state==="done" ? "completed" : state==="open" ? "start" : above ? "locked, "+(LEVELS[u.level]||LEVELS.analyst).name+" level" : "locked, finish "+u.lessons[Math.max(0,i-1)].title+" first";
-      const btn=el("button",{class:"node "+cls+(state==="open"&&!isGlobalNext?" quiet":""),type:"button","aria-label":l.title+", "+label,
-        "aria-disabled":state==="locked"?"true":false,
-        onclick:(ev)=>{
-          if(state==="locked"){ sfx.wrong(); const n=ev.currentTarget; n.classList.remove("nope"); void n.offsetWidth; n.classList.add("nope");
-            toast(above ? (LEVELS[u.level]||LEVELS.analyst).name+" lesson. Change your level to unlock it." : "Finish \u201c"+u.lessons[i-1].title+"\u201d first"); return; }
-          sfx.tap(); lessonIntro(u,l,c,cd); },html:icon});
-      const w=el("div",{class:"node-wrap",style:`transform:translateX(${off}px)`},
-        isGlobalNext?el("div",{class:"bubble","aria-hidden":"true"},done===0&&ui===0?"START":"NEXT UP"):null,
-        btn, el("div",{class:"node-label"+(state==="open"?" cur":"")+(state==="locked"?" locked":"")},l.title));
-      if(isGlobalNext){curNode=w;}
-      if(i===2){ const m=bull("idle"); m.classList.add("mascot-side"); m.setAttribute("style",`${off>0?"left":"right"}:2%;`); path.append(m); }
-      path.append(w);
+    el("div",{class:"lchips"},
+      el("a",{class:"track-chip",href:"settings.html","aria-label":"Track: "+t.name+". Change in settings"},
+        el("span",{class:"tcc-i",html:t.icon}),el("span",{},t.name),el("span",{class:"tcc-c",html:CHEV_R})),
+      el("a",{class:"track-chip",href:"settings.html","aria-label":"Level: "+lv.name+". Change in settings"},
+        el("span",{class:"tcc-i",html:LVL_ICON[S.level]||LVL_ICON.analyst}),el("span",{},lv.name),el("span",{class:"tcc-c",html:CHEV_R}))));
+  const all=unitsFor(S.track).map((u,i)=>({u,ci:i}));
+  const below=all.filter(x=>lvlRank(x.u.level)<myRank), mine=all.filter(x=>lvlRank(x.u.level)===myRank), above=all.filter(x=>lvlRank(x.u.level)>myRank);
+  const ctx={curSet:false,nodeIndex:0,curNode:null};
+  if(below.length){
+    const names=[...new Set(below.map(x=>(LEVELS[x.u.level]||LEVELS.intern).name))].join(" & ");
+    const n=below.reduce((a,x)=>a+x.u.lessons.length,0), d=below.reduce((a,x)=>a+x.u.lessons.filter(l=>S.done[l.id]).length,0);
+    app.append(el("button",{class:"review-toggle",type:"button","aria-expanded":showEarlier?"true":"false",onclick:()=>{sfx.tap();showEarlier=!showEarlier;home(true)}},
+      el("span",{class:"rt-b"},el("span",{class:"rt-t"},"Review earlier levels"),el("span",{class:"rt-s"},names+" · "+d+" / "+n+" lessons done")),
+      el("span",{class:"rt-c"+(showEarlier?" open":""),html:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>'})));
+    if(showEarlier){ below.forEach(x=>renderUnit(x.u,x.ci,ctx,true)); app.append(el("div",{class:"lvl-divider"},el("span",{},lv.name+" level"))); }
+  }
+  mine.forEach(x=>renderUnit(x.u,x.ci,ctx,false));
+  if(!mine.length) app.append(el("div",{class:"empty-lvl"},"No "+lv.name+" units for this track yet. Open earlier levels above, or try another track in settings."));
+  if(above.length){
+    const grp={}; above.forEach(x=>{ (grp[x.u.level]=grp[x.u.level]||[]).push(x.u); });
+    Object.entries(grp).forEach(([k,us])=>{
+      const n=us.reduce((a,u)=>a+u.lessons.length,0);
+      app.append(el("a",{class:"teaser",href:"settings.html","aria-label":LEVELS[k].name+" level, "+us.length+" units locked. Change your level in settings"},
+        el("span",{class:"tc-icon lv-"+k,html:LVL_ICON[k]}),
+        el("span",{class:"tz-b"},el("span",{class:"tz-t"},LEVELS[k].name+" level",el("span",{class:"tz-lock",html:ICON.lock})),
+          el("span",{class:"tz-s"},us.length+" units · "+n+" lessons: "+us.slice(0,3).map(u=>u.title).join(", ")+(us.length>3?"…":"")),
+          el("span",{class:"tz-go"},"Ready for more? Change your level in Settings")),
+        el("span",{class:"tc-go","aria-hidden":"true",html:CHEV_R})));
     });
-    app.append(path);
-  });
+  }
   app.append(el("footer",{},"Progress is saved on this device. For education only, not investment advice."), tabbar());
   if(keepScroll) window.scrollTo(0,y);
-  else if(curNode) setTimeout(()=>curNode.scrollIntoView({block:"center",behavior:reduceMotion?"auto":"smooth"}),150);
+  else if(ctx.curNode) setTimeout(()=>ctx.curNode.scrollIntoView({block:"center",behavior:reduceMotion?"auto":"smooth"}),150);
+}
+function renderUnit(u,ui,ctx,review){
+  const [c,cd]=UNIT_COLORS[ui%UNIT_COLORS.length];
+  const done=u.lessons.filter(l=>S.done[l.id]).length;
+  app.append(el("div",{class:"unit-banner"+(review?" review":""),style:`--uc:${c}`},
+    el("div",{},el("div",{class:"u"},(u.label||("Unit "+u.unit)).toUpperCase(), el("span",{class:"lvbadge lv-"+(u.level||"analyst")},(LEVELS[u.level]||LEVELS.analyst).name)),el("div",{class:"n"},u.title)),
+    el("div",{class:"c"},done+" / "+u.lessons.length)));
+  const path=el("div",{class:"path",style:`--c:${c};--cd:${cd}`});
+  u.lessons.forEach((l,i)=>{
+    const isDone=!!S.done[l.id];
+    const unlocked = review || i===0 || !!S.done[u.lessons[i-1].id];   // review units are fully open; otherwise finish the one before
+    const state = isDone ? "done" : unlocked ? "open" : "locked";
+    const isGlobalNext = !review && state==="open" && !ctx.curSet; if(isGlobalNext) ctx.curSet=true;
+    const off=OFFS[ctx.nodeIndex%OFFS.length]; ctx.nodeIndex++;
+    const cls = state==="done" ? "done" : state==="open" ? "cur" : "todo";
+    const icon = state==="done" ? ICON.check : state==="open" ? ICON.play : ICON.lock;
+    const label = state==="done" ? "completed" : state==="open" ? "start" : "locked, finish "+u.lessons[Math.max(0,i-1)].title+" first";
+    const btn=el("button",{class:"node "+cls+(state==="open"&&!isGlobalNext?" quiet":""),type:"button","aria-label":l.title+", "+label,
+      "aria-disabled":state==="locked"?"true":false,
+      onclick:(ev)=>{
+        if(state==="locked"){ sfx.wrong(); const n=ev.currentTarget; n.classList.remove("nope"); void n.offsetWidth; n.classList.add("nope");
+          toast("Finish “"+u.lessons[i-1].title+"” first"); return; }
+        sfx.tap(); lessonIntro(u,l,c,cd); },html:icon});
+    const w=el("div",{class:"node-wrap",style:`transform:translateX(${off}px)`},
+      isGlobalNext?el("div",{class:"bubble","aria-hidden":"true"},done===0&&!ctx.started?"START":"NEXT UP"):null,
+      btn, el("div",{class:"node-label"+(state==="open"?" cur":"")+(state==="locked"?" locked":"")},l.title));
+    if(isDone) ctx.started=true;
+    if(isGlobalNext){ctx.curNode=w;}
+    if(i===2){ const m=bull("idle"); m.classList.add("mascot-side"); m.setAttribute("style",`${off>0?"left":"right"}:2%;`); path.append(m); }
+    path.append(w);
+  });
+  app.append(path);
 }
 
 // ---------- lesson ----------

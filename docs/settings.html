@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0A0D12">
+<title>Leveraged: Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Geist+Mono:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A0D12;--card:#131820;--card2:#1A202B;--ink:#F3F5F8;--muted:#98A1B0;--line:#232B37;--line2:#2F3846;--g:#3DDC97;--gd:#1A8A5B;--gold:#E3B341;--blue:#6EA8FF}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Geist,Inter,system-ui,-apple-system,Segoe UI,Arial,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+a{color:var(--g)}
+.wrap{max-width:640px;margin:0 auto;padding:14px 16px calc(110px + env(safe-area-inset-bottom))}
+.top{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px;padding:4px 0 16px}
+.back{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none}
+h1{margin:0;text-align:center;font-size:19px;font-weight:700;letter-spacing:-.3px}
+h2{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:26px 4px 10px}
+.sub{font-size:14px;color:var(--muted);margin:-4px 4px 12px}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px;border-radius:18px;border:1px solid var(--line2);background:var(--card);cursor:pointer;transition:border-color .15s,background .15s}
+.opt[aria-checked="true"]{border-color:var(--g);background:rgba(61,220,151,.07)}
+.ic{width:44px;height:44px;border-radius:13px;background:var(--card2);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ic svg{width:22px;height:22px}
+.ic.intern{color:var(--blue)}.ic.analyst{color:var(--g)}.ic.partner{color:var(--gold)}.ic.track{color:var(--g)}
+.ob{flex:1;min-width:0}.on{font-weight:800;font-size:16px}.od{font-size:13px;color:#C6CCD6}
+.radio{width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);flex-shrink:0;position:relative}
+.opt[aria-checked="true"] .radio{border-color:var(--g)}
+.opt[aria-checked="true"] .radio::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--g)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:4px 16px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .l{font-weight:600}.row .s{font-size:13px;color:var(--muted)}
+.sw{width:52px;height:32px;border-radius:999px;border:0;background:var(--line2);position:relative;cursor:pointer;flex-shrink:0;transition:background .2s}
+.sw::after{content:"";position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .2s}
+.sw[aria-checked="true"]{background:var(--g)}.sw[aria-checked="true"]::after{transform:translateX(20px)}
+.btnlink{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--card2);color:var(--ink);font-weight:700;font-size:14px;text-decoration:none;cursor:pointer}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--card2);border:1px solid var(--line2);border-radius:999px;padding:10px 18px;font-weight:700;font-size:14px;z-index:40;animation:rise .25s ease;max-width:90vw;text-align:center}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(10,13,18,.86);backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
+.tabbar .in{max-width:640px;margin:0 auto;display:flex;justify-content:space-around}
+.tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:64px;min-height:48px;justify-content:center;text-decoration:none;color:#7D8594;font-size:11px;font-weight:600}
+footer{color:#6E7684;font-size:12px;margin:28px 2px 0;text-align:center}
+@keyframes rise{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="index.html" id="back" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a>
+    <h1>Settings</h1><span></span>
+  </div>
+
+  <h2 id="lvl-h">Your level</h2>
+  <p class="sub">Changes your daily brief, podcast and which lessons you see.</p>
+  <div class="opts" role="radiogroup" aria-labelledby="lvl-h" id="levels"></div>
+
+  <h2 id="trk-h">Your track</h2>
+  <p class="sub">Adds lessons and interview lines for the roles you're recruiting for.</p>
+  <div class="opts" role="radiogroup" aria-labelledby="trk-h" id="tracks"></div>
+
+  <h2>App</h2>
+  <div class="card">
+    <div class="row"><div><div class="l" id="snd-l">Sound effects</div><div class="s">Tones in lessons</div></div>
+      <button class="sw" id="sound" type="button" role="switch" aria-labelledby="snd-l" aria-checked="true"></button></div>
+  </div>
+
+  <h2>Account</h2>
+  <div class="card" id="account"><div class="row"><div class="s">Checking…</div></div></div>
+
+  <footer>Leveraged · For education only. Not investment advice.</footer>
+</div>
+<nav class="tabbar" aria-label="Main"><div class="in">
+  <a href="index.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>Today</a>
+  <a href="learn.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/></svg>Learn</a>
+  <a href="network.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16 14.2c2.9.3 5 2.6 5 5.8"/></svg>Network</a>
+  <a href="archive.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>Archive</a>
+</div></nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SB_URL = "https://dhgkaxebqwqoqdjmrkqi.supabase.co";
+const SB_KEY = "sb_publishable_vXGHGR5nhC8sl6qeEr0rKw_339O-zOh";
+const KEY = "leveraged-learn-v1";
+const LEVELS = {
+  intern: {name:"Intern", desc:"New to markets. Plain-English brief, a beginner podcast and starter lessons.",
+    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M12 10c0-3 2-5 5-5 0 3-2 5-5 5z"/><path d="M12 13c0-2.5-1.8-4-4-4 0 2.5 1.8 4 4 4z"/></svg>'},
+  analyst: {name:"Analyst", desc:"You know the basics. Interview-level brief, podcast and technical lessons.",
+    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>'},
+  partner: {name:"Partner", desc:"Deep and technical. Second-order analysis and advanced lessons.",
+    icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/></svg>'}
+};
+const TRACKS = {
+  ib: {name:"IB & Markets", desc:"Investment banking, equity research and markets", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>'},
+  consulting: {name:"Consulting", desc:"Case interviews, market sizing and fit", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>'},
+  accounting: {name:"Accounting", desc:"Audit, IFRS & ASPE and Big 4 interviews", icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>'}
+};
+const TRACK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>';
+
+function el(tag, attrs, ...kids){
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "class") n.className = v; else if (k === "html") n.innerHTML = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) { if (c == null || c === false) continue; n.append(c.nodeType ? c : document.createTextNode(String(c))); }
+  return n;
+}
+function state(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+function saveState(s){ try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
+function toast(t){ document.querySelectorAll(".toast").forEach(x => x.remove()); const x = el("div", {class:"toast", role:"status"}, t); document.body.append(x); setTimeout(() => x.remove(), 2600); }
+
+let sb = null, me = null, profile = null;
+try { if (window.supabase) sb = window.supabase.createClient(SB_URL, SB_KEY, {auth:{persistSession:true, autoRefreshToken:true}}); } catch (e) { sb = null; }
+
+// Back goes to the page you came from (within the app), otherwise Today
+(function(){ try { const r = document.referrer; if (r && new URL(r).origin === location.origin && !/settings\.html/.test(r)) document.getElementById("back").href = r; } catch (e) {} })();
+
+function radioGroup(boxId, items, current, iconFor, onPick){
+  const box = document.getElementById(boxId);
+  box.replaceChildren(...Object.entries(items).map(([k, v]) => el("button", {class:"opt", type:"button", role:"radio", "aria-checked": k === current ? "true" : "false",
+      onclick: () => { onPick(k); box.querySelectorAll(".opt").forEach(b => b.setAttribute("aria-checked", b.dataset.k === k ? "true" : "false")); }, "data-k": k},
+    el("span", {class:"ic " + iconFor(k), html: v.icon || TRACK_ICON}),
+    el("span", {class:"ob"}, el("div", {class:"on"}, v.name), el("div", {class:"od"}, v.desc)),
+    el("span", {class:"radio", "aria-hidden":"true"}))));
+}
+
+async function pushToProfile(fields){
+  if (!sb || !me || !profile) return;
+  try { await sb.from("profiles").update(fields).eq("id", me.id); } catch (e) {}
+}
+
+function render(){
+  const s = state();
+  radioGroup("levels", LEVELS, s.level || "analyst", k => k, (k) => {
+    const st = state(); st.level = k; saveState(st); pushToProfile({level: k});
+    toast("Now " + LEVELS[k].name + ": brief, podcast and lessons updated");
+  });
+  radioGroup("tracks", TRACKS, s.track || "ib", () => "track", (k) => {
+    const st = state(); st.track = k; saveState(st); pushToProfile({track: k});
+    toast("Track set to " + TRACKS[k].name);
+  });
+  const snd = document.getElementById("sound");
+  snd.setAttribute("aria-checked", s.sound === false ? "false" : "true");
+  snd.onclick = () => { const st = state(); st.sound = !(st.sound !== false); saveState(st); snd.setAttribute("aria-checked", st.sound ? "true" : "false"); };
+}
+
+async function account(){
+  const box = document.getElementById("account");
+  if (!sb) { box.replaceChildren(el("div", {class:"row"}, el("div", {class:"s"}, "Accounts are unavailable right now."))); return; }
+  const { data } = await sb.auth.getSession();
+  me = data && data.session ? data.session.user : null;
+  if (!me) {
+    box.replaceChildren(el("div", {class:"row"}, el("div", {}, el("div", {class:"l"}, "Not signed in"), el("div", {class:"s"}, "Join the Network to save progress across devices.")),
+      el("a", {class:"btnlink", href:"network.html"}, "Join")));
+    return;
+  }
+  const r = await sb.from("profiles").select("*").eq("id", me.id).maybeSingle();
+  profile = r.data || null;
+  if (profile) {
+    const st = state();
+    // the account's settings win if this device has none yet
+    if (!st.level && profile.level) st.level = profile.level;
+    if (!st.track && profile.track) st.track = profile.track;
+    saveState(st); render();
+  }
+  box.replaceChildren(
+    el("div", {class:"row"}, el("div", {}, el("div", {class:"l"}, profile ? profile.display_name : "Signed in"), el("div", {class:"s"}, profile ? "@" + profile.username + (profile.school ? " · " + profile.school : "") : me.email || "")),
+      el("a", {class:"btnlink", href:"network.html"}, "Profile")),
+    el("div", {class:"row"}, el("div", {class:"s"}, "Signed in on this device"),
+      el("button", {class:"btnlink", type:"button", onclick: async () => { await sb.auth.signOut(); toast("Signed out"); account(); }}, "Sign out")));
+}
+
+render();
+account();
+</script>
+</body>
+</html>

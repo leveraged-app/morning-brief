@@ -84,6 +84,17 @@ select.input{appearance:none;background-image:linear-gradient(45deg,transparent 
 .ub small{font-size:12px;font-weight:600;color:var(--muted)}
 .res{font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;padding:3px 8px;border-radius:999px}
 .res.right{color:var(--g);background:rgba(61,220,151,.12)}.res.wrong{color:var(--orange);background:rgba(255,154,92,.12)}.res.pending{color:var(--muted);background:var(--card2)}
+.barr{display:flex;align-items:center;gap:8px}
+.gear{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);display:flex;align-items:center;justify-content:center;text-decoration:none}
+.cl-card{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px 16px;margin-bottom:10px;border-radius:18px;border:1px solid var(--line2);background:var(--card);cursor:pointer}
+.cl-card .who{flex:1;min-width:0}
+.cl-form{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-top:14px}
+.cl-form h3{margin:0 0 4px;font-size:16px}.cl-form p{margin:0 0 12px;font-size:14px;color:var(--muted)}
+.cl-form .input{margin-bottom:10px}
+.codebox{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--line2);border-radius:18px;padding:12px 14px;margin-bottom:14px}
+.codebox .cd{font-family:'Geist Mono',monospace;font-size:24px;font-weight:700;letter-spacing:4px}
+.codebox .lb{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.backlink{background:none;border:0;color:var(--muted);font-weight:700;font-size:14px;cursor:pointer;padding:6px 0;margin-bottom:6px}
 .soon{margin-top:22px;background:var(--card);border:1px dashed var(--line2);border-radius:20px;padding:16px 18px}
 .soon h3{margin:0 0 4px;font-size:16px}.soon p{margin:0;font-size:14px;color:var(--muted)}
 .lev{width:96px;margin:0 auto 4px;display:block}
@@ -102,7 +113,7 @@ footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
 </head>
 <body>
 <div class="wrap">
-  <div class="appbar"><div class="brand"><span class="logo" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg></span>Leveraged</div><span class="pill" id="pill">Network</span></div>
+  <div class="appbar"><div class="brand"><span class="logo" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg></span>Leveraged</div><div class="barr"><span class="pill" id="pill">Network</span><a class="gear" href="settings.html" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a></div></div>
   <main id="app"><div class="spin" role="status" aria-label="Loading"></div></main>
   <footer>For education only. Not investment advice.</footer>
 </div>
@@ -126,7 +137,11 @@ let sb = null;
 try { sb = window.supabase.createClient(SB_URL, SB_KEY, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true}}); } catch (e) { sb = null; }
 
 const app = document.getElementById("app");
-let me = null, profile = null, tab = "league";
+let me = null, profile = null, tab = "league", openClub = null;
+// A link like network.html?join=ABC234 opens the Clubs tab with the code filled in
+let JOIN_CODE = (new URLSearchParams(location.search).get("join") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+try { if (JOIN_CODE) localStorage.setItem("lev-join", JOIN_CODE); else JOIN_CODE = localStorage.getItem("lev-join") || ""; } catch (e) {}
+if (JOIN_CODE) tab = "clubs";
 
 // ---------- helpers ----------
 function el(tag, attrs, ...kids){
@@ -298,15 +313,14 @@ function renderHome(){
       el("div", {class:"st"}, el("div", {class:"v"}, String(liveStreak(profile))), el("div", {class:"l"}, "Day streak")),
       el("div", {class:"st"}, el("div", {class:"v"}, String(profile.xp_total)), el("div", {class:"l"}, "Total XP")),
       el("div", {class:"st", id:"myrank"}, el("div", {class:"v"}, "–"), el("div", {class:"l"}, "League rank"))));
-  const tabs = [["league", "League"], ["schools", "Schools"], ["friends", "Friends"], ["call", "Market call"]];
+  const tabs = [["league", "League"], ["clubs", "Clubs"], ["schools", "Schools"], ["friends", "Friends"], ["call", "Market call"]];
   const segs = el("div", {class:"segs", role:"tablist", "aria-label":"Network sections"},
     tabs.map(([k, v]) => el("button", {class:"seg", type:"button", role:"tab", "aria-selected": tab === k ? "true" : "false", onclick: () => { tab = k; renderHome(); }}, v)));
   const body = el("div", {id:"tabbody"}, spinner());
   app.replaceChildren(head, segs, body,
-    el("div", {class:"soon"}, el("h3", {}, "Clubs are coming"), el("p", {}, "Club leaders will be able to create a group, run challenges and track members.")),
     el("div", {class:"center"}, el("button", {class:"link", type:"button", onclick: async () => { await sb.auth.signOut(); }}, "Sign out")));
   loadRank();
-  ({league: tabLeague, schools: tabSchools, friends: tabFriends, call: tabCall})[tab](body);
+  ({league: tabLeague, clubs: tabClubs, schools: tabSchools, friends: tabFriends, call: tabCall})[tab](body);
 }
 
 async function loadRank(){
@@ -332,6 +346,69 @@ async function tabLeague(box){
     el("div", {class:"ph"}, el("h2", {}, "This week's league"), el("span", {}, "Resets in " + d + " day" + (d === 1 ? "" : "s"))),
     error ? el("div", {class:"empty"}, "Couldn't load the league. Try again soon.") :
     rows.length ? el("div", {class:"list"}, rows) : el("div", {class:"empty"}, "No XP yet this week. Finish a lesson in Learn to take the lead.")));
+}
+
+function errMsg(error, fallback){ const m = error && error.message || ""; return /club|code|name|full|own up|be in up/i.test(m) ? m : fallback; }
+async function tabClubs(box){
+  if (openClub) return clubDetail(box, openClub);
+  const { data, error } = await sb.rpc("my_clubs");
+  const clubs = data || [];
+  const name = el("input", {class:"input", maxlength:"40", placeholder:"Club name, e.g. Laurier Finance Club", "aria-label":"Club name"});
+  const code = el("input", {class:"input", maxlength:"6", placeholder:"6-letter code", autocapitalize:"characters", autocomplete:"off", "aria-label":"Join code", value: JOIN_CODE,
+    style:"font-family:'Geist Mono',monospace;letter-spacing:3px;text-transform:uppercase"});
+  const mk = el("button", {class:"btn", type:"button", onclick: async () => {
+    const v = name.value.trim(); if (v.length < 2) { toast("Give your club a name"); return; }
+    mk.disabled = true; const { data: c, error } = await sb.rpc("create_club", {p_name: v}); mk.disabled = false;
+    if (error) { toast(errMsg(error, "Couldn't create the club. Try again.")); return; }
+    toast("Club created. Share code " + c); const r = await sb.rpc("my_clubs"); openClub = (r.data || []).find(x => x.code === c) || null; tabClubs(box);
+  }}, "Create club");
+  const jn = el("button", {class:"btn ghost", type:"button", onclick: async () => {
+    const v = code.value.trim().toUpperCase(); if (v.length !== 6) { toast("Codes are 6 characters"); return; }
+    jn.disabled = true; const { data: n, error } = await sb.rpc("join_club", {p_code: v}); jn.disabled = false;
+    if (error) { toast(errMsg(error, "Couldn't join. Check the code.")); return; }
+    toast("You joined " + n); try { localStorage.removeItem("lev-join"); } catch (e) {} JOIN_CODE = ""; const r = await sb.rpc("my_clubs"); openClub = (r.data || []).find(x => x.code === v) || null; tabClubs(box);
+  }}, "Join club");
+  const cards = clubs.map(c => el("button", {class:"cl-card", type:"button", onclick: () => { openClub = c; tabClubs(box); }},
+    el("div", {class:"av sm"}, initials(c.name)),
+    el("div", {class:"who"}, el("div", {class:"n"}, c.name), el("div", {class:"s"}, c.members + " member" + (c.members === 1 ? "" : "s") + (c.is_owner ? " · You run this" : ""))),
+    el("div", {class:"xp"}, String(c.xp_week), el("small", {}, " XP"))));
+  box.replaceChildren(el("div", {class:"panel"},
+    el("div", {class:"ph"}, el("h2", {}, "Your clubs"), el("span", {}, "This week's XP")),
+    error ? el("div", {class:"empty"}, "Couldn't load clubs. Try again soon.") :
+    cards.length ? el("div", {}, cards) : el("div", {class:"empty"}, "Start a club for your finance society, study group or friends, then share the code."),
+    el("div", {class:"cl-form"}, el("h3", {}, "Join with a code"), el("p", {}, "Got a code from a friend or club leader?"), code, jn),
+    el("div", {class:"cl-form"}, el("h3", {}, "Create a club"), el("p", {}, "You get a code to share. Members compete on a weekly club leaderboard."), name, mk)));
+  if (JOIN_CODE && !clubs.some(c => c.code === JOIN_CODE)) code.focus();
+}
+async function clubDetail(box, c){
+  const { data, error } = await sb.rpc("club_leaderboard", {p_club: c.club_id});
+  const d = daysLeftInWeek();
+  const link = location.origin + location.pathname + "?join=" + c.code;
+  const share = el("button", {class:"mini on", type:"button", onclick: async () => {
+    const text = "Join my Leveraged club “" + c.name + "” with code " + c.code;
+    try { if (navigator.share) { await navigator.share({title:"Leveraged club", text, url: link}); return; } } catch (e) { return; }
+    try { await navigator.clipboard.writeText(text + ": " + link); toast("Invite link copied"); } catch (e) { toast("Code: " + c.code); }
+  }}, "Invite");
+  const rows = (data || []).map((r, i) => rowEl(i + 1, r.display_name, "@" + r.username, el("div", {class:"xp"}, String(r.xp_week), el("small", {}, " XP")), r.user_id === me.id));
+  box.replaceChildren(el("div", {class:"panel"},
+    el("button", {class:"backlink", type:"button", onclick: () => { openClub = null; tabClubs(box); }}, "‹ All clubs"),
+    el("div", {class:"ph"}, el("h2", {}, c.name), el("span", {}, "Resets in " + d + " day" + (d === 1 ? "" : "s"))),
+    el("div", {class:"codebox"}, el("div", {}, el("div", {class:"lb"}, "Join code"), el("div", {class:"cd"}, c.code)), share),
+    error ? el("div", {class:"empty"}, "Couldn't load the leaderboard.") :
+    rows.length ? el("div", {class:"list"}, rows) : el("div", {class:"empty"}, "No members yet."),
+    el("div", {class:"center"}, el("button", {class:"link", type:"button", onclick: async () => {
+      if (!confirmLeave(c)) return;
+      const { error } = await sb.rpc("leave_club", {p_club: c.club_id});
+      if (error) { toast("Couldn't leave. Try again."); return; }
+      toast("You left " + c.name); openClub = null; tabClubs(box);
+    }}, "Leave club"))));
+}
+function confirmLeave(c){
+  // two taps instead of a browser dialog
+  if (confirmLeave.armed === c.club_id) { confirmLeave.armed = null; return true; }
+  confirmLeave.armed = c.club_id; toast(c.is_owner && c.members > 1 ? "Tap again to leave. The longest member becomes the leader." : "Tap Leave club again to confirm"); 
+  setTimeout(() => { if (confirmLeave.armed === c.club_id) confirmLeave.armed = null; }, 4000);
+  return false;
 }
 
 async function tabSchools(box){
