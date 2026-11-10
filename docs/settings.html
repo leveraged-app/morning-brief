@@ -37,6 +37,7 @@ h2{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;co
 .sw{width:52px;height:32px;border-radius:999px;border:0;background:var(--line2);position:relative;cursor:pointer;flex-shrink:0;transition:background .2s}
 .sw::after{content:"";position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .2s}
 .sw[aria-checked="true"]{background:var(--g)}.sw[aria-checked="true"]::after{transform:translateX(20px)}
+.btnlink.danger{color:#FF8A8F;border-color:rgba(229,72,77,.45)}
 .btnlink{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:12px;border:1px solid var(--line2);background:var(--card2);color:var(--ink);font-weight:700;font-size:14px;text-decoration:none;cursor:pointer}
 .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:var(--card2);border:1px solid var(--line2);border-radius:999px;padding:10px 18px;font-weight:700;font-size:14px;z-index:40;animation:rise .25s ease;max-width:90vw;text-align:center}
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(10,13,18,.86);backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
@@ -71,7 +72,13 @@ footer{color:#6E7684;font-size:12px;margin:28px 2px 0;text-align:center}
   <h2>Account</h2>
   <div class="card" id="account"><div class="row"><div class="s">Checking…</div></div></div>
 
-  <footer>Leveraged · For education only. Not investment advice.</footer>
+  <h2>Legal</h2>
+  <div class="card">
+    <div class="row"><div><div class="l">Terms of Use</div><div class="s">Education only, not investment advice</div></div><a class="btnlink" href="terms.html">Read</a></div>
+    <div class="row"><div><div class="l">Privacy Policy</div><div class="s">What we collect and who can see it</div></div><a class="btnlink" href="privacy.html">Read</a></div>
+  </div>
+
+  <footer>Leveraged · Written with AI, so it can contain errors. For education only, not investment advice.</footer>
 </div>
 <nav class="tabbar" aria-label="Main"><div class="in">
   <a href="index.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>Today</a>
@@ -172,7 +179,22 @@ async function account(){
     el("div", {class:"row"}, el("div", {}, el("div", {class:"l"}, profile ? profile.display_name : "Signed in"), el("div", {class:"s"}, profile ? "@" + profile.username + (profile.school ? " · " + profile.school : "") : me.email || "")),
       el("a", {class:"btnlink", href:"network.html"}, "Profile")),
     el("div", {class:"row"}, el("div", {class:"s"}, "Signed in on this device"),
-      el("button", {class:"btnlink", type:"button", onclick: async () => { await sb.auth.signOut(); toast("Signed out"); account(); }}, "Sign out")));
+      el("button", {class:"btnlink", type:"button", onclick: async () => { await sb.auth.signOut(); toast("Signed out"); account(); }}, "Sign out")),
+    el("div", {class:"row"}, el("div", {}, el("div", {class:"l"}, "Delete account"), el("div", {class:"s"}, "Permanently removes your profile, XP, follows, clubs and calls. Lessons saved on this device stay.")),
+      delBtn()));
+}
+
+function delBtn(){
+  let armed = false, timer = null;
+  const b = el("button", {class:"btnlink danger", type:"button", onclick: async () => {
+    if (!armed) { armed = true; b.textContent = "Tap to confirm"; toast("This can't be undone. Tap again to delete."); timer = setTimeout(() => { armed = false; b.textContent = "Delete"; }, 5000); return; }
+    clearTimeout(timer); b.disabled = true; b.textContent = "Deleting…";
+    const { error } = await sb.rpc("delete_my_account");
+    if (error) { b.disabled = false; armed = false; b.textContent = "Delete"; toast("Couldn't delete. Try again, or email leveragedbrief@gmail.com"); return; }
+    try { await sb.auth.signOut(); } catch (e) {}
+    toast("Your account was deleted"); profile = null; me = null; account();
+  }}, "Delete");
+  return b;
 }
 
 render();

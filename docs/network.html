@@ -106,6 +106,9 @@ select.input{appearance:none;background-image:linear-gradient(45deg,transparent 
 .tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:64px;min-height:48px;justify-content:center;text-decoration:none;color:#7D8594;font-size:11px;font-weight:600}
 .tabbar a.on{color:var(--ink)}.tabbar a.on svg{color:var(--g)}
 footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
+footer a{color:#98A1B0}
+.agree{display:flex;gap:10px;align-items:flex-start;margin:12px 2px 4px;font-size:14px;color:#C6CCD6;cursor:pointer}
+.agree input{width:20px;height:20px;margin:1px 0 0;accent-color:#3DDC97;flex-shrink:0}
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -115,7 +118,7 @@ footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
 <div class="wrap">
   <div class="appbar"><div class="brand"><span class="logo" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg></span>Leveraged</div><div class="barr"><span class="pill" id="pill">Network</span><a class="gear" href="settings.html" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a></div></div>
   <main id="app"><div class="spin" role="status" aria-label="Loading"></div></main>
-  <footer>For education only. Not investment advice.</footer>
+  <footer>For education only. Not investment advice. · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a></footer>
 </div>
 <nav class="tabbar" aria-label="Main"><div class="in">
   <a href="index.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>Today</a>
@@ -231,23 +234,27 @@ function renderSignIn(sent){
     app.replaceChildren(el("section", {class:"hero center"}, lev(),
       el("div", {class:"eyebrow"}, "Check your inbox"),
       el("h1", {}, "We sent you a sign-in link"),
-      el("p", {class:"sub"}, "Open the email from Supabase on this device and tap the link. It brings you straight back here, signed in."),
+      el("p", {class:"sub"}, "Open the email from Leveraged on this device and tap the link. Check spam if it isn't there in a minute. It brings you straight back here, signed in."),
       el("button", {class:"link", type:"button", onclick: () => renderSignIn(false)}, "Use a different email")));
     return;
   }
   const email = el("input", {class:"input", id:"email", type:"email", autocomplete:"email", inputmode:"email", placeholder:"you@school.ca", required:true});
   const err = el("div", {class:"err", role:"alert"});
+  const agree = el("input", {type:"checkbox", id:"agree", required:true});
+  const agreeRow = el("label", {class:"agree", for:"agree"}, agree,
+    el("span", {}, "I'm 16 or older and agree to the ", el("a", {href:"terms.html"}, "Terms"), " and ", el("a", {href:"privacy.html"}, "Privacy Policy"), "."));
   const btn = el("button", {class:"btn", type:"submit"}, "Send me a sign-in link");
   const form = el("form", {onsubmit: async (ev) => {
     ev.preventDefault(); err.textContent = "";
     const v = email.value.trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) { err.textContent = "Enter a valid email address."; return; }
+    if (!agree.checked) { err.textContent = "Please confirm you're 16 or older and agree to the Terms."; return; }
     btn.disabled = true; btn.textContent = "Sending…";
     const { error } = await sb.auth.signInWithOtp({email: v, options: {emailRedirectTo: location.origin + location.pathname}});
     btn.disabled = false; btn.textContent = "Send me a sign-in link";
     if (error) { err.textContent = /rate|security/i.test(error.message) ? "Too many tries. Wait a minute and try again." : "Couldn't send the link: " + error.message; return; }
     renderSignIn(true);
-  }}, el("div", {class:"field"}, el("label", {for:"email"}, "Email"), email), err, btn);
+  }}, el("div", {class:"field"}, el("label", {for:"email"}, "Email"), email), agreeRow, err, btn);
   app.replaceChildren(
     el("section", {class:"hero"}, el("div", {class:"eyebrow"}, "Network"),
       el("h1", {}, "Compete, compare and keep each other going"),

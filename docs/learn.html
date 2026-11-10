@@ -161,6 +161,7 @@ label.lbl{display:block;font-size:13px;font-weight:700;color:var(--muted);margin
 .chip .h{color:var(--cc);font-size:10px;font-weight:800;letter-spacing:1.2px;padding:10px 0 0;text-transform:uppercase}
 .chip .v{font-family:'Geist Mono',Geist,monospace;font-size:24px;font-weight:700;padding:2px 0 12px;color:var(--ink);font-variant-numeric:tabular-nums}
 footer{color:var(--muted);font-size:12px;margin-top:28px;text-align:center}
+footer a{color:var(--muted)}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:40}
 
 /* the bull: friendly faces for each mood */
@@ -497,7 +498,7 @@ function home(keepScroll){
         el("span",{class:"tc-go","aria-hidden":"true",html:CHEV_R})));
     });
   }
-  app.append(el("footer",{},"Progress is saved on this device. For education only, not investment advice."), tabbar());
+  app.append(el("footer",{},"Progress is saved on this device. For education only, not investment advice. ",el("a",{href:"terms.html"},"Terms")," · ",el("a",{href:"privacy.html"},"Privacy")), tabbar());
   if(keepScroll) window.scrollTo(0,y);
   else if(ctx.curNode) setTimeout(()=>ctx.curNode.scrollIntoView({block:"center",behavior:reduceMotion?"auto":"smooth"}),150);
 }
