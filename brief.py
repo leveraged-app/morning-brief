@@ -279,11 +279,24 @@ Then a "Full story:" line followed by 2-3 short paragraphs (about 120-160 words)
 covering the terms, the strategic rationale, valuation if reported, and what it
 signals. Write "None" if you found none.
 
+## Already out today
+Economic data and scheduled events that already happened today before you are
+writing (for example 8:30 AM ET releases like CPI or jobs, earnings released
+before the open, or a central bank decision). One bullet each: time (ET), the
+event, the actual result versus what was expected, then one short sentence on
+what it means. Format: "8:30 AM: US October CPI. 2.9% vs 3.0% expected. Cooler
+inflation keeps a December rate cut in play." Write "None" if nothing came out.
+
 ## What's coming today
-Bullets: time (ET where known), the event, and why it matters in a few words.
+Only events still AHEAD of the time you are writing (later today, ET). If
+nothing else is scheduled today, list the most important events for the next
+few days and put the day in the time (e.g. "Thu 8:30 AM"). Bullets: time, the
+event, and why it matters in a few words. Never list something that already
+happened; that goes in "Already out today".
 
 ## Canada corner
-2-4 short bullets.
+2-4 short bullets. Always include at least 2: the TSX, Bank of Canada, the
+loonie, Canadian data or a notable Canadian company.
 
 ## The takeaway
 Three short interview lines, one for each type of candidate, each 1-2 sentences:
@@ -361,7 +374,7 @@ def parse_brief(text):
         return None
     d = clean_text(d)
     d.setdefault("headline", "Today's markets")
-    for k in ("stories", "calendar", "canada", "sources", "deals"):
+    for k in ("stories", "calendar", "canada", "sources", "deals", "results"):
         if not isinstance(d.get(k), list):
             d[k] = []
     return d
@@ -409,6 +422,13 @@ BRIEF_SCHEMA = {
             "time": {"type": "string"}, "event": {"type": "string"}, "why": {"type": "string"}},
             "required": ["event"]}},
         "calendar_note": {"type": "string"},
+        "results": {"type": "array", "description": "Data and events already released today, with actual vs expected",
+            "items": {"type": "object", "properties": {
+            "time": {"type": "string"}, "event": {"type": "string"},
+            "actual": {"type": "string", "description": "The actual figure, short, e.g. '2.9% y/y'"},
+            "expected": {"type": "string", "description": "The forecast, short, e.g. '3.0%'; empty if none"},
+            "why": {"type": "string", "description": "One short sentence on what it means"}},
+            "required": ["event"]}},
         "canada": {"type": "array", "items": {"type": "string"}},
         "glossary": {"type": "array", "items": {"type": "object", "properties": {
             "term": {"type": "string"}, "meaning": {"type": "string"}}, "required": ["term", "meaning"]}},
@@ -439,7 +459,8 @@ def structure_brief(md, level="analyst"):
             "Put each story's and deal's 'Full story' text in its full field (rewritten for the same "
             "audience), keeping the paragraph breaks. Use plain text only (no citation tags, HTML or markdown). "
             "Leave deals empty if the brief says none. If nothing is scheduled today, leave "
-            "calendar empty and say so in calendar_note.\n\n" + CITE_RE.sub("", md)}],
+            "calendar empty and say so in calendar_note. Put the 'Already out today' items in results "
+            "(leave it empty if none) and only future events in calendar.\n\n" + CITE_RE.sub("", md)}],
     }
     r = requests.post("https://api.anthropic.com/v1/messages",
                       headers={"x-api-key": key, "anthropic-version": "2023-06-01",
@@ -451,7 +472,7 @@ def structure_brief(md, level="analyst"):
         if blk.get("type") == "tool_use":
             d = clean_text(blk.get("input") or {})
             d.setdefault("headline", "Today's markets")
-            for k in ("stories", "calendar", "canada", "sources", "deals", "glossary"):
+            for k in ("stories", "calendar", "canada", "sources", "deals", "glossary", "results"):
                 if not isinstance(d.get(k), list):
                     d[k] = []
             return d
@@ -485,7 +506,7 @@ def parse_markdown_brief(md):
 
     d = {"headline": plain((get("headline") or ["Today's markets"])[0]),
          "mood": " ".join(plain(x) for x in get("mood")),
-         "stories": [], "deals": [], "calendar": [], "calendar_note": "", "canada": [],
+         "stories": [], "deals": [], "calendar": [], "calendar_note": "", "canada": [], "results": [],
          "takeaway": "", "sources": []}
 
     st = None
@@ -556,6 +577,18 @@ def parse_markdown_brief(md):
 
     d["canada"] = [plain(x) for x in get("canada") if plain(x)][:4]
 
+    for line in get("already out", "out today", "results"):
+        t = plain(line)
+        if not t or t.lower().rstrip(".") == "none":
+            continue
+        m = re.match(r"^(.{1,20}?(?:AM|PM|ET))[^:]*:\s*(.+)$", t, re.I)
+        when, rest = (m.group(1), m.group(2)) if m else ("", t)
+        parts = [x.strip() for x in re.split(r"\.\s+", rest, maxsplit=2)]
+        d["results"].append({"time": when.strip(), "event": parts[0].rstrip("."),
+                             "actual": parts[1].rstrip(".") if len(parts) > 1 else "", "expected": "",
+                             "why": parts[2] if len(parts) > 2 else ""})
+    d["results"] = d["results"][:5]
+
     for line in get("takeaway", "interview"):
         t = plain(line)
         low = t.lower()
@@ -591,6 +624,12 @@ def brief_markdown(d, full=False):
             out += [f"- **{x.get('type', 'Deal')}: {who}** ({x.get('value', 'Undisclosed')}). {x.get('why', '')}"]
             if full and x.get("full"):
                 out += [f"  Full story: {x['full']}"]
+        out.append("")
+    if d.get("results"):
+        out += ["## Already out today"]
+        for r_ in d["results"]:
+            exp = f" vs {r_['expected']} expected" if r_.get("expected") else ""
+            out.append(f"- {r_.get('time', '')}: {r_.get('event', '')}. {r_.get('actual', '')}{exp}. {r_.get('why', '')}".strip())
         out.append("")
     out += ["## 3. What's coming today"]
     for c in d["calendar"]:
@@ -655,10 +694,13 @@ Structure, in this order:
    without mentioning it.
 5. Canada (short): what's moving the TSX, banks, energy, the Bank of Canada
    or the loonie, if not already covered.
-6. On deck today (short): the key scheduled events and why they matter.
+6. Data and what's next (short): any data already out today, with the actual
+   number versus what was expected, then the key events still ahead and why
+   they matter.
 7. The interview angle: from the brief's takeaway, one quick line each for
    IB and markets candidates, consulting candidates and accounting candidates.
-8. Sign-off: one plain line, then "This is for education only, not investment
+8. Sign-off: one plain line, then "This show is written and voiced by AI, so
+   double-check anything important. It's for education only, not investment
    advice."
 
 How ALEX talks:
@@ -1025,6 +1067,10 @@ button{font:inherit;color:inherit}
 .ev:last-child{border-bottom:0}
 .ev .t{font-family:'Geist Mono',Geist,monospace;flex:0 0 86px;font-size:13px;font-weight:700;color:var(--g);font-variant-numeric:tabular-nums;padding-top:2px}
 .ev .e{font-weight:600;font-size:15px}.ev .w{font-size:13px;color:var(--muted)}
+.ae{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;margin:3px 0 2px}
+.ae .act{font-family:'Geist Mono',Geist,monospace;font-weight:700;font-size:15px;color:var(--ink)}
+.ae .exp{font-size:13px;color:var(--muted)}
+.ev.past{opacity:.45}.ev.past .t::after{content:" · Done";color:var(--muted);font-weight:600}
 .empty{color:var(--muted);font-size:15px;padding:14px 0}
 .canada{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:16px 18px}
 .canada ul{margin:0;padding:0;list-style:none}
@@ -1059,7 +1105,9 @@ details.src li{margin:0 0 6px}
 .list .h{font-family:Geist,Inter,sans-serif;font-size:17px;font-weight:700;margin:4px 0 6px;letter-spacing:-.2px}
 .list .c{font-size:12px;font-weight:700;color:var(--g);background:var(--upbg);padding:3px 8px;border-radius:999px;margin-right:6px}
 h1.page{font-family:Geist,Inter,sans-serif;font-size:30px;letter-spacing:-.6px;margin:4px 2px 16px}
-footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
+footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center;line-height:1.6}
+footer a{color:#98A1B0}
+.aitag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;border:1px solid var(--line2);font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);vertical-align:2px}
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(10,13,18,.86);backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
 .tabbar .in{max-width:640px;margin:0 auto;display:flex;justify-content:space-around}
 .tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:64px;min-height:48px;justify-content:center;text-decoration:none;color:#7D8594;font-size:11px;font-weight:600}
@@ -1179,6 +1227,27 @@ SITE_JS = r"""
   document.querySelectorAll('.copyline').forEach(function(cp){ cp.addEventListener('click', function(){
     var box=cp.closest('.line'); var vis=box?box.querySelector('.lq:not([hidden])'):null; var t=vis?vis.innerText:'';
     (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){cp.textContent='Copied';setTimeout(function(){cp.textContent='Copy'},1600)}).catch(function(){}); }); });
+  // Coming up: events whose time has passed (Toronto time) are marked Done
+  (function(){
+    function torNow(){ var p={}; try{ new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()).forEach(function(x){p[x.type]=x.value;}); }catch(e){ return null; }
+      return {iso:p.year+'-'+p.month+'-'+p.day, min:(+p.hour)*60+(+p.minute)}; }
+    function run(){
+      var now=torNow(); if(!now) return;
+      document.querySelectorAll('.cal-list').forEach(function(list){
+        var iso=list.getAttribute('data-iso'); var evs=[].slice.call(list.querySelectorAll('.ev'));
+        var past=function(ev){ var m=ev.getAttribute('data-min'); if(m===''||m===null) return false; return iso<now.iso || (iso===now.iso && +m<=now.min); };
+        evs.forEach(function(ev){ ev.classList.toggle('past', past(ev)); });
+        var v=list.closest('.lvlv')||document; var tile=v.querySelector('.cal-tile'); if(!tile) return;
+        var left=evs.filter(function(ev){ return !past(ev); });
+        var w=tile.querySelector('.cal-w'), t=tile.querySelector('.cal-e'), m=tile.querySelector('.cal-m');
+        if(!w||!t||!m||!evs.length) return;
+        if(left.length){ w.textContent=left[0].querySelector('.t').textContent; t.textContent=left[0].querySelector('.e').textContent;
+          m.textContent=left.length>1?('+'+(left.length-1)+' more'):(iso===now.iso?'Last one today':'Today'); }
+        else { w.textContent='All done'; t.textContent="That's everything scheduled. Results land in tomorrow's brief."; m.textContent=evs.length+' events'; }
+      });
+    }
+    run(); setInterval(run, 60000);
+  })();
   // level versions: Intern / Analyst / Partner (shared with Learn)
   var KEY='leveraged-learn-v1';
   function getState(){ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ return {}; } }
@@ -1231,7 +1300,7 @@ def page(title, body, root, active):
 <div class="appbar"><div class="brand"><span class="logo" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg></span>{SITE_NAME}</div>
 <div class="barr">{{datepill}}<a class="gear" href="{root}settings.html" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a></div></div>
 {body}
-<footer>For education only. Not investment advice. Some numbers come from ETFs that track an index.</footer>
+<footer>Written and voiced by AI, so it can contain errors. For education only, not investment advice.<br>Market data: Financial Modeling Prep, FRED (Federal Reserve Bank of St. Louis) and the Bank of Canada. Some numbers come from ETFs that track an index and may be delayed.<br><a href="{root}terms.html">Terms</a> · <a href="{root}privacy.html">Privacy</a></footer>
 </div>
 <nav class="tabbar" aria-label="Main"><div class="in">{tab("index.html", "Today", "today")}{tab("learn.html", "Learn", "learn")}{tab("network.html", "Network", "network")}{tab("archive.html", "Archive", "archive")}</div></nav>
 <script>{SITE_JS}</script>
@@ -1276,7 +1345,7 @@ def player_html(rec, root):
         return '<div class="player"><span class="noaudio">No episode for this day.</span></div>'
     return (f'<div class="player"><button class="pbtn" type="button" aria-label="Play episode">'
             f'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>'
-            f'<div class="pmeta"><div class="ptitle">Today\'s episode</div>'
+            f'<div class="pmeta"><div class="ptitle">Today\'s episode <span class="aitag">AI voice</span></div>'
             f'<div class="bar"><div class="pfill"></div><input class="pseek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Seek"></div>'
             f'<div class="ptime"><span class="pcur">0:00</span><span class="pdur">–:––</span></div></div>'
             f'<button class="speed" type="button" aria-label="Playback speed">1×</button>'
@@ -1307,6 +1376,22 @@ def full_html(kicker, title, text, has_sources):
     src = '<button class="srcbtn" type="button" data-open="sources">See sources</button>' if has_sources else ""
     return (f'<article class="longread"><span class="tag">{e(kicker)}</span><h3>{e(title)}</h3>'
             f'<div class="lr-body">{body}</div>{src}</article>')
+
+
+def _even_tiles(tiles):
+    """Two small tiles per row; if a run of small tiles is odd, the last one goes full width."""
+    out, run = [], []
+    def flush():
+        if len(run) % 2:
+            run[-1] = run[-1].replace('<button class="sum', '<button class="sum wide', 1)
+        out.extend(run); run.clear()
+    for t in tiles:
+        if t.startswith('<button class="sum wide'):
+            flush(); out.append(t)
+        else:
+            run.append(t)
+    flush()
+    return out
 
 
 def tile_btn(sid, label, meta, body, wide=False):
@@ -1386,20 +1471,45 @@ def _day_variant(rec, root):
                       f'<div class="parties">{e(x.get("buyer", ""))}{target}</div><p>{e(x.get("why", ""))}</p>{more}</article>')
         sheets.insert(0, sheet("deals", "Deals", f'<div class="deals">{"".join(dl)}</div>'))
 
-    # Coming up
+    # Out today: data that already came out, actual vs expected
+    res = [r_ for r_ in d.get("results", []) if r_.get("event")]
+    if res:
+        r0 = res[0]
+        def _ae(r_):
+            a, x = r_.get("actual", ""), r_.get("expected", "")
+            return (a + (f" vs {x} est." if x else "")).strip()
+        tiles.append(tile_btn("out", "Out today", f'{len(res)} release{"s" if len(res) != 1 else ""}',
+                              f'<span class="when">{e(_ae(r0) or r0.get("time", ""))}</span><p class="sum-t">{e(r0.get("event", ""))}</p>'))
+        rows = "".join(
+            f'<div class="ev"><div class="t">{e(r_.get("time", ""))}</div><div><div class="e">{e(r_.get("event", ""))}</div>'
+            + (f'<div class="ae"><span class="act">{e(r_.get("actual", ""))}</span>'
+               + (f'<span class="exp">vs {e(r_.get("expected", ""))} expected</span>' if r_.get("expected") else "") + '</div>'
+               if r_.get("actual") else "")
+            + f'<div class="w">{e(r_.get("why", ""))}</div></div></div>' for r_ in res)
+        sheets.append(sheet("out", "Out today", f'<div class="timeline">{rows}</div>'))
+
+    # Coming up (the page greys out events once their time passes)
     cal = d.get("calendar", [])
+    iso = e(rec.get("iso", ""))
+    def _mins(t):
+        m = re.match(r"^\s*(\d{1,2})(?::(\d{2}))?\s*([AP])\.?M", t or "", re.I)
+        if not m:
+            return ""
+        h = int(m.group(1)) % 12 + (12 if m.group(3).upper() == "P" else 0)
+        return str(h * 60 + int(m.group(2) or 0))
     if cal:
         c0 = cal[0]
-        body = f'<span class="when">{e(c0.get("time", ""))}</span><p class="sum-t">{e(c0.get("event", ""))}</p>'
+        body = f'<span class="when cal-w">{e(c0.get("time", ""))}</span><p class="sum-t cal-e">{e(c0.get("event", ""))}</p>'
         meta = f'+{len(cal) - 1} more' if len(cal) > 1 else "Today"
     else:
         body = f'<p class="sum-t">{e(d.get("calendar_note") or "Nothing major on the calendar today.")}</p>'
         meta = "Today"
-    tiles.append(tile_btn("coming", "Coming up", meta, body))
-    evs = "".join(f'<div class="ev"><div class="t">{e(c.get("time", ""))}</div><div><div class="e">{e(c.get("event", ""))}</div>'
+    tiles.append(tile_btn("coming", "Coming up", f'<span class="cal-m">{meta}</span>', body).replace(
+        'class="sum"', f'class="sum cal-tile" data-iso="{iso}"', 1))
+    evs = "".join(f'<div class="ev" data-min="{_mins(c.get("time", ""))}"><div class="t">{e(c.get("time", ""))}</div><div><div class="e">{e(c.get("event", ""))}</div>'
                   f'<div class="w">{e(c.get("why", ""))}</div></div></div>' for c in cal) or \
         f'<div class="empty">{e(d.get("calendar_note") or "Nothing major on the calendar today.")}</div>'
-    sheets.append(sheet("coming", "Coming up today", f'<div class="timeline">{evs}</div>'))
+    sheets.append(sheet("coming", "Coming up", f'<div class="timeline cal-list" data-iso="{iso}">{evs}</div>'))
 
     # Canada desk
     can = d.get("canada", [])
@@ -1442,7 +1552,7 @@ def _day_variant(rec, root):
         sheets.append(sheet("sources", "Sources", f'<ol class="srclist">{srcs}</ol>'))
 
     grid = (f'<section class="sec reveal" aria-label="Today\'s sections"><div class="sech"><h2>Today\'s brief</h2>'
-            f'<span>Tap a section to read more</span></div><div class="sums">{"".join(tiles)}</div>{src_link}</section>')
+            f'<span>Tap a section to read more</span></div><div class="sums">{"".join(_even_tiles(tiles))}</div>{src_link}</section>')
     return note + hero + grid + "".join(sheets)
 
 
@@ -1602,7 +1712,7 @@ def resolve_market_calls(nums):
         print(f"  ! market call scoring failed: {e}", file=sys.stderr)
 
 
-BRIEF_VERSION = "2026-11-09c"
+BRIEF_VERSION = "2026-11-10b"
 
 
 def main():
