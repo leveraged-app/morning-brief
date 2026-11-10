@@ -6,7 +6,16 @@ on:
     # Both run; the first step skips whichever one isn't 11 AM in Toronto.
     - cron: "0 15 * * 1-5"
     - cron: "0 16 * * 1-5"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "site-only = rebuild website, no cost | no-podcast = new brief, no audio or email | full = everything"
+        type: choice
+        default: site-only
+        options:
+          - site-only
+          - no-podcast
+          - full
 
 permissions:
   contents: write
@@ -33,7 +42,7 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
         if: steps.gate.outputs.go == 'yes'
-      - run: python brief.py
+      - run: python brief.py $FLAGS
         if: steps.gate.outputs.go == 'yes'
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
@@ -45,6 +54,7 @@ jobs:
           BRIEF_TO: ${{ secrets.BRIEF_TO }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          FLAGS: ${{ github.event.inputs.mode == 'site-only' && '--rebuild-site' || (github.event.inputs.mode == 'no-podcast' && '--no-podcast --no-email' || '') }}
       - name: Publish website
         if: steps.gate.outputs.go == 'yes'
         run: |
@@ -58,3 +68,4 @@ jobs:
         with:
           name: brief
           path: briefs/
+          if-no-files-found: ignore
