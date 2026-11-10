@@ -80,7 +80,8 @@ SAMPLE = {
 }
 
 # Claude settings
-MODEL = os.getenv("BRIEF_MODEL", "claude-sonnet-5-5")
+MODEL = os.getenv("BRIEF_MODEL", "claude-sonnet-5-5")          # research + writing (uses web search)
+FAST_MODEL = os.getenv("BRIEF_FAST_MODEL", "claude-haiku-5-5")  # formatting, level rewrites, podcast scripts (cheaper)
 WEB_SEARCH_TOOL = os.getenv("BRIEF_SEARCH_TOOL", "web_search_20250305")
 
 TIMEOUT = 20
@@ -307,7 +308,7 @@ def write_with_claude(table, today):
     body = {
         "model": MODEL,
         "max_tokens": 8000,
-        "tools": [{"type": WEB_SEARCH_TOOL, "name": "web_search", "max_uses": 8}],
+        "tools": [{"type": WEB_SEARCH_TOOL, "name": "web_search", "max_uses": int(os.getenv("BRIEF_MAX_SEARCHES", "5"))}],
         "messages": [{"role": "user", "content": PROMPT.format(today=today, table=table)}],
     }
     r = requests.post(
@@ -428,7 +429,7 @@ def structure_brief(md, level="analyst"):
     if not key or not md:
         return None
     body = {
-        "model": MODEL, "max_tokens": 6000,
+        "model": FAST_MODEL, "max_tokens": 6000,
         "tools": [{"name": "publish_brief",
                    "description": "Publish the morning brief to the app.",
                    "input_schema": BRIEF_SCHEMA}],
@@ -688,7 +689,7 @@ def claude_plain(prompt, max_tokens=3000):
         "https://api.anthropic.com/v1/messages",
         headers={"x-api-key": key, "anthropic-version": "2023-06-01",
                  "content-type": "application/json"},
-        json={"model": MODEL, "max_tokens": max_tokens,
+        json={"model": FAST_MODEL, "max_tokens": max_tokens,
               "messages": [{"role": "user", "content": prompt}]},
         timeout=180,
     )
@@ -956,6 +957,8 @@ button{font:inherit;color:inherit}
 .appbar{display:flex;justify-content:space-between;align-items:center;padding:6px 2px 14px}
 .brand{display:flex;align-items:center;gap:8px;font-family:Geist,Inter,sans-serif;font-weight:700;font-size:17px;letter-spacing:-.2px}
 .logo{width:26px;height:26px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center}
+.barr{display:flex;align-items:center;gap:8px}
+.gear{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);display:flex;align-items:center;justify-content:center}
 .datepill{font-size:13px;font-weight:600;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:6px 12px;border-radius:999px}
 .hero{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:22px 20px 18px;position:relative;overflow:hidden}
 .hero::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--g);opacity:.8}
@@ -1069,6 +1072,7 @@ footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
 .lvlbtn{flex:1;min-height:36px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer}
 .lvlbtn[aria-pressed="true"]{background:var(--g);color:#06140E}
 .lvlv[hidden]{display:none}
+.edlink{margin-left:6px;color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0;text-decoration:underline;text-underline-offset:2px}
 .gloss{display:flex;flex-direction:column;gap:10px}
 .gterm{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px}
 .gterm h3{margin:0 0 4px;font-size:17px;color:var(--g)}
@@ -1225,7 +1229,7 @@ def page(title, body, root, active):
 <style>{SITE_CSS}</style></head>
 <body><div class="wrap">
 <div class="appbar"><div class="brand"><span class="logo" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg></span>{SITE_NAME}</div>
-{{datepill}}</div>
+<div class="barr">{{datepill}}<a class="gear" href="{root}settings.html" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a></div></div>
 {body}
 <footer>For education only. Not investment advice. Some numbers come from ETFs that track an index.</footer>
 </div>
@@ -1457,15 +1461,14 @@ def day_body(rec, root):
     if not levels:
         return _day_variant(rec, root)
     audios = rec.get("audios") or {}
-    switch = ('<div class="lvlbar" role="group" aria-label="Brief level"><span class="lvl-l">Your level</span>'
-              + "".join(f'<button type="button" class="lvlbtn" data-lvl="{l}" aria-pressed="{"true" if l == "analyst" else "false"}">'
-                        f'{LEVEL_NAMES[l]}</button>' for l in LEVELS)
-              + '</div>')
+    switch = ""
     parts = []
     for l in LEVELS:
         d = levels.get(l) or levels.get("analyst")
         r2 = dict(rec, data=d, audio=audios.get(l) or rec.get("audio"))
-        inner = _prefix_ids(_day_variant(r2, root), f"{l}-")
+        inner = _prefix_ids(_day_variant(r2, root), f"{l}-").replace(
+            '<div class="eyebrow">Morning brief</div>',
+            f'<div class="eyebrow">Morning brief · {LEVEL_NAMES[l]} edition <a class="edlink" href="{root}settings.html">Change</a></div>', 1)
         parts.append(f'<div class="lvlv" data-level="{l}"{"" if l == "analyst" else " hidden"}>{inner}</div>')
     return switch + "".join(parts)
 
@@ -1508,6 +1511,15 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None, levels
             shutil.copyfile(m, audio / audios[lvl])
     if audios.get("analyst"):
         audio_name = audios["analyst"]
+    prev_path = days / f"{iso}.json"
+    if not audios and not audio_name and prev_path.exists():
+        # a run without podcasts (e.g. a test) keeps the episodes already made today
+        try:
+            prev = json.loads(prev_path.read_text(encoding="utf-8"))
+            audios = {k: v for k, v in (prev.get("audios") or {}).items() if (audio / v).exists()}
+            audio_name = prev.get("audio") if prev.get("audio") and (audio / prev["audio"]).exists() else audios.get("analyst")
+        except Exception:
+            pass
     rec = {"iso": iso, "today": today, "nums": nums, "written": written,
            "audio": audio_name, "demo": demo, "data": data, "levels": levels, "audios": audios}
     (days / f"{iso}.json").write_text(json.dumps(rec), encoding="utf-8")
@@ -1516,6 +1528,15 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None, levels
     for f in audio.glob("*.mp3"):
         if f.stem[:10] < cutoff:
             f.unlink()
+    render_site(site_dir)
+
+
+def render_site(site_dir):
+    """Rebuild every page from the saved days. Costs nothing: no AI or data calls."""
+    import json
+    days = site_dir / "days"
+    audio = site_dir / "audio"
+    (site_dir / ".nojekyll").write_text("")
 
     def pill(text):
         return f'<span class="datepill">{html.escape(text)}</span>'
@@ -1581,7 +1602,7 @@ def resolve_market_calls(nums):
         print(f"  ! market call scoring failed: {e}", file=sys.stderr)
 
 
-BRIEF_VERSION = "2026-11-09b"
+BRIEF_VERSION = "2026-11-09c"
 
 
 def main():
@@ -1590,7 +1611,16 @@ def main():
     ap.add_argument("--demo", action="store_true", help="use sample numbers")
     ap.add_argument("--no-email", action="store_true")
     ap.add_argument("--no-podcast", action="store_true")
+    ap.add_argument("--rebuild-site", action="store_true",
+                    help="only rebuild the website from saved days (no AI, data or email; costs nothing)")
     args = ap.parse_args()
+
+    if args.rebuild_site:
+        print(f"brief.py version {BRIEF_VERSION}")
+        site_dir = Path(os.getenv("SITE_DIR") or Path(__file__).parent / "docs")
+        render_site(site_dir)
+        print("  site-only rebuild done (no AI, no email)")
+        return
 
     today = dt.date.today().strftime("%A, %B %d, %Y")
     print(f"brief.py version {BRIEF_VERSION}")
