@@ -17,6 +17,8 @@ button{font:inherit;color:inherit}
 .appbar{display:flex;justify-content:space-between;align-items:center;padding:6px 2px 14px}
 .brand{display:flex;align-items:center;gap:8px;font-family:Geist,Inter,sans-serif;font-weight:700;font-size:17px;letter-spacing:-.2px}
 .logo{width:26px;height:26px;border-radius:8px;background:var(--card2);border:1px solid var(--line2);display:flex;align-items:center;justify-content:center}
+.barr{display:flex;align-items:center;gap:8px}
+.gear{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);display:flex;align-items:center;justify-content:center}
 .datepill{font-size:13px;font-weight:600;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:6px 12px;border-radius:999px}
 .hero{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:22px 20px 18px;position:relative;overflow:hidden}
 .hero::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--g);opacity:.8}
@@ -130,6 +132,7 @@ footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
 .lvlbtn{flex:1;min-height:36px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer}
 .lvlbtn[aria-pressed="true"]{background:var(--g);color:#06140E}
 .lvlv[hidden]{display:none}
+.edlink{margin-left:6px;color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0;text-decoration:underline;text-underline-offset:2px}
 .gloss{display:flex;flex-direction:column;gap:10px}
 .gterm{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px}
 .gterm h3{margin:0 0 4px;font-size:17px;color:var(--g)}
@@ -182,7 +185,7 @@ body.locked{overflow:hidden}
 </style></head>
 <body><div class="wrap">
 <div class="appbar"><div class="brand"><span class="logo" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3DDC97" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/></svg></span>Leveraged</div>
-<span class="datepill">4 days</span></div>
+<div class="barr"><span class="datepill">4 days</span><a class="gear" href="settings.html" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a></div></div>
 <h1 class="page">Archive</h1><div class="list"><a href="days/2026-11-10.html"><div class="d">Tue, Nov 10</div><div class="h">Tech Rebound Lifts Stocks Ahead of Key CPI</div><span class="c">Podcast</span></a><a href="days/2026-11-09.html"><div class="d">Mon, Nov 9</div><div class="h">Tech rebounds and oil slides, lifting stocks sharply</div><span class="c">Podcast</span></a><a href="days/2026-11-08.html"><div class="d">Sun, Nov 8</div><div class="h">AI chip rout hammers stocks; volatility spikes</div><span class="c">Podcast</span></a><a href="days/2026-11-07.html"><div class="d">Sat, Nov 7</div><div class="h">Morning brief</div><span class="c">Podcast</span></a></div>
 <footer>For education only. Not investment advice. Some numbers come from ETFs that track an index.</footer>
 </div>
