@@ -370,6 +370,25 @@ def looks_like_json(text):
     return bool(text) and "{" in text and ('"headline"' in text or '"stories"' in text)
 
 
+LEVELS = ["intern", "analyst", "partner"]
+LEVEL_NAMES = {"intern": "Intern", "analyst": "Analyst", "partner": "Partner"}
+LEVEL_REWRITE = {
+    "intern": ("Rewrite this market brief for complete beginners (the 'Intern' level): students new to "
+               "markets. Use plain, friendly language and short sentences. The first time a finance term "
+               "appears, explain it in a few words in brackets, e.g. 'yields (the interest rate on bonds)'. "
+               "Focus on what happened and why it matters to everyday people and new investors. Keep the "
+               "same stories, deals, numbers and facts; don't add new facts. Also fill 'glossary' with 4-6 "
+               "key terms from today's brief and a one-sentence plain-English meaning for each."),
+    "analyst": ("Copy this market brief into the publish_brief tool. Keep the wording and facts; don't add "
+                "anything."),
+    "partner": ("Rewrite this market brief for experienced finance professionals (the 'Partner' level). Be "
+                "concise and technical; don't explain basic terms. In each 'why it matters', add the "
+                "second-order effects: implications for valuation multiples, rates and credit spreads, "
+                "sector positioning, and deal or financing activity. Keep the same stories, deals, numbers "
+                "and facts; don't invent new data. Leave glossary empty."),
+}
+
+
 BRIEF_SCHEMA = {
     "type": "object",
     "properties": {
@@ -390,6 +409,8 @@ BRIEF_SCHEMA = {
             "required": ["event"]}},
         "calendar_note": {"type": "string"},
         "canada": {"type": "array", "items": {"type": "string"}},
+        "glossary": {"type": "array", "items": {"type": "object", "properties": {
+            "term": {"type": "string"}, "meaning": {"type": "string"}}, "required": ["term", "meaning"]}},
         "takeaway": {"type": "string", "description": "The IB & Markets interview line"},
         "takeaway_consulting": {"type": "string", "description": "The Consulting interview line"},
         "takeaway_accounting": {"type": "string", "description": "The Accounting interview line"},
@@ -400,22 +421,22 @@ BRIEF_SCHEMA = {
 }
 
 
-def structure_brief(md):
-    """Second step: turn the written brief into the app's format.
+def structure_brief(md, level="analyst"):
+    """Second step: turn the written brief into the app's format, rewritten for one level.
     A forced tool call means the reply always comes back as a valid object."""
     key = os.getenv("ANTHROPIC_API_KEY")
     if not key or not md:
         return None
     body = {
-        "model": MODEL, "max_tokens": 4000,
+        "model": MODEL, "max_tokens": 6000,
         "tools": [{"name": "publish_brief",
                    "description": "Publish the morning brief to the app.",
                    "input_schema": BRIEF_SCHEMA}],
         "tool_choice": {"type": "tool", "name": "publish_brief"},
         "messages": [{"role": "user", "content":
-            "Copy this market brief into the publish_brief tool. Keep the wording and facts; "
-            "put each story's and deal's 'Full story' text in its full field, keeping the paragraph breaks; "
-            "don't add anything. Use plain text only (no citation tags, HTML or markdown). "
+            LEVEL_REWRITE.get(level, LEVEL_REWRITE["analyst"]) + " "
+            "Put each story's and deal's 'Full story' text in its full field (rewritten for the same "
+            "audience), keeping the paragraph breaks. Use plain text only (no citation tags, HTML or markdown). "
             "Leave deals empty if the brief says none. If nothing is scheduled today, leave "
             "calendar empty and say so in calendar_note.\n\n" + CITE_RE.sub("", md)}],
     }
@@ -429,7 +450,7 @@ def structure_brief(md):
         if blk.get("type") == "tool_use":
             d = clean_text(blk.get("input") or {})
             d.setdefault("headline", "Today's markets")
-            for k in ("stories", "calendar", "canada", "sources", "deals"):
+            for k in ("stories", "calendar", "canada", "sources", "deals", "glossary"):
                 if not isinstance(d.get(k), list):
                     d[k] = []
             return d
@@ -748,28 +769,43 @@ def speed_up(mp3_path, speed):
         print(f"  ! speed-up failed: {res.stderr[:200]}", file=sys.stderr)
 
 
-def make_podcast(brief, out_dir, stem):
+LEVEL_PODCAST = {
+    "intern": ("\n\nAUDIENCE: this is the 'Intern' edition for complete beginners. Explain every finance "
+               "term in simple words the first time it comes up, use everyday comparisons, go a little "
+               "slower, and focus on what happened and why it matters. Skip technical detail like "
+               "valuation multiples. About 800-900 words."),
+    "analyst": "",
+    "partner": ("\n\nAUDIENCE: this is the 'Partner' edition for experienced finance professionals. Don't "
+                "explain basic terms. Be dense and analytical: spend more time on second-order effects for "
+                "valuations, rates, credit spreads, sector positioning and deal activity, and on what to "
+                "watch. About 1,000-1,100 words."),
+}
+
+
+def make_podcast(brief, out_dir, stem, level="analyst"):
     """Returns the path to the MP3, or None if skipped/failed."""
     key = os.getenv("OPENAI_API_KEY")
     if not key or not os.getenv("ANTHROPIC_API_KEY"):
         print("  (podcast skipped: needs OPENAI_API_KEY and ANTHROPIC_API_KEY)")
         return None
     try:
-        script = claude_plain(PODCAST_PROMPT.format(brief=brief))
+        script = claude_plain(PODCAST_PROMPT.format(brief=brief) + LEVEL_PODCAST.get(level, ""))
         lines = parse_script(script)
         if not lines:
             raise RuntimeError("script had no ALEX: lines")
-        (out_dir / f"{stem}-script.txt").write_text(script, encoding="utf-8")
-        audio = b"".join(tts(text, who, key) for who, text in lines)
+        (out_dir / f"{stem}-{level}-script.txt").write_text(script, encoding="utf-8")
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=4) as pool:  # record several lines at once, keep order
+            audio = b"".join(pool.map(lambda wt: tts(wt[1], wt[0], key), lines))
         print(f"  voices: {TTS_STATS['main']} lines on {TTS_MODEL}, "
               f"{TTS_STATS['fallback']} on the older fallback model")
-        mp3 = out_dir / f"{stem}-podcast.mp3"
+        mp3 = out_dir / f"{stem}-{level}-podcast.mp3"
         mp3.write_bytes(audio)
         speed_up(mp3, PODCAST_SPEED)
-        print(f"  podcast saved {mp3} ({len(lines)} lines, {len(audio)//1024} KB)")
+        print(f"  {level} podcast saved {mp3.name} ({len(lines)} lines, {len(audio)//1024} KB)")
         return mp3
     except Exception as e:
-        print(f"  ! podcast: {e}", file=sys.stderr)
+        print(f"  ! {level} podcast: {e}", file=sys.stderr)
         return None
 
 
@@ -933,7 +969,7 @@ button{font:inherit;color:inherit}
 .pmeta{flex:1;min-width:0}
 .ptitle{font-size:14px;font-weight:600;margin:0 0 6px}
 .bar{position:relative;height:6px;border-radius:999px;background:var(--card2);cursor:pointer}
-.bar>div{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--g);width:0}
+.bar>.pfill{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--g);width:0}
 .bar input{position:absolute;inset:-10px 0;width:100%;opacity:0;cursor:pointer;margin:0}
 .ptime{font-family:'Geist Mono',Geist,monospace;display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
 .speed{min-width:52px;height:36px;border-radius:10px;border:1px solid var(--line2);background:transparent;color:var(--ink);font-size:13px;font-weight:700;cursor:pointer}
@@ -1028,6 +1064,15 @@ footer{color:#6E7684;font-size:12px;margin:26px 2px 0;text-align:center}
 .tabbar a.on svg{color:var(--g)}
 .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1)}
 .reveal.in{opacity:1;transform:none}
+.lvlbar{display:flex;align-items:center;gap:6px;margin:0 0 12px;padding:4px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+.lvl-l{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);padding:0 8px 0 6px;white-space:nowrap}
+.lvlbtn{flex:1;min-height:36px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer}
+.lvlbtn[aria-pressed="true"]{background:var(--g);color:#06140E}
+.lvlv[hidden]{display:none}
+.gloss{display:flex;flex-direction:column;gap:10px}
+.gterm{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px}
+.gterm h3{margin:0 0 4px;font-size:17px;color:var(--g)}
+.gterm p{margin:0;font-size:15px;color:#D6DBE3}
 .sums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .sum{display:flex;flex-direction:column;gap:8px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;cursor:pointer;min-height:132px;color:var(--ink);transition:transform .12s,border-color .15s,background .15s}
 .sum:active{transform:scale(.98)}
@@ -1126,25 +1171,41 @@ SITE_JS = r"""
     segs.forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-k')===k ? 'true' : 'false'); }); }
   segs.forEach(function(b){ b.addEventListener('click', function(){ showLine(b.getAttribute('data-k')); }); });
   try { var st=JSON.parse(localStorage.getItem('leveraged-learn-v1')||'{}'); if(st.track) showLine(st.track); } catch(e) {}
-  // copy interview line
-  var cp=document.getElementById('copyline');
-  if(cp){ cp.addEventListener('click', function(){ var vis=document.querySelector('.lq:not([hidden])'); var t=vis?vis.innerText:'';
-    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){cp.textContent='Copied';setTimeout(function(){cp.textContent='Copy'},1600)}).catch(function(){}); }); }
-  // audio player
-  var a=document.getElementById('aud'); if(!a) return;
-  var btn=document.getElementById('pbtn'), fill=document.getElementById('pfill'), seek=document.getElementById('pseek'),
-      cur=document.getElementById('pcur'), dur=document.getElementById('pdur'), sp=document.getElementById('pspeed');
+  // copy interview line (one button per level version)
+  document.querySelectorAll('.copyline').forEach(function(cp){ cp.addEventListener('click', function(){
+    var box=cp.closest('.line'); var vis=box?box.querySelector('.lq:not([hidden])'):null; var t=vis?vis.innerText:'';
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){cp.textContent='Copied';setTimeout(function(){cp.textContent='Copy'},1600)}).catch(function(){}); }); });
+  // level versions: Intern / Analyst / Partner (shared with Learn)
+  var KEY='leveraged-learn-v1';
+  function getState(){ try{ return JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){ return {}; } }
+  function setLevel(l, save){
+    var vs=document.querySelectorAll('.lvlv'); if(!vs.length) return;
+    var ok=false; vs.forEach(function(v){ if(v.getAttribute('data-level')===l) ok=true; }); if(!ok) l='analyst';
+    vs.forEach(function(v){ v.hidden=v.getAttribute('data-level')!==l; });
+    document.querySelectorAll('.lvlbtn').forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-lvl')===l?'true':'false'); });
+    document.querySelectorAll('.player audio').forEach(function(x){ if(!x.closest('.lvlv:not([hidden])')) x.pause(); });
+    if(save){ try{ var st=getState(); st.level=l; localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){} }
+  }
+  document.querySelectorAll('.lvlbtn').forEach(function(b){ b.addEventListener('click', function(){ setLevel(b.getAttribute('data-lvl'), true); }); });
+  setLevel(getState().level || 'analyst', false);
+  if(location.hash){ var t=document.getElementById(location.hash.slice(1)); if(t && t.closest('.lvlv')) setLevel(t.closest('.lvlv').getAttribute('data-level'), false); }
+  // audio players
   var PLAY='<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>',
       PAUSE='<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
   function fmt(s){ if(!isFinite(s)) return '0:00'; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
-  btn.addEventListener('click', function(){ if(a.paused){a.play()}else{a.pause()} });
-  a.addEventListener('play', function(){btn.innerHTML=PAUSE;btn.setAttribute('aria-label','Pause episode')});
-  a.addEventListener('pause', function(){btn.innerHTML=PLAY;btn.setAttribute('aria-label','Play episode')});
-  a.addEventListener('loadedmetadata', function(){dur.textContent=fmt(a.duration)});
-  a.addEventListener('timeupdate', function(){ var p=a.duration?a.currentTime/a.duration*100:0; fill.style.width=p+'%'; seek.value=p; cur.textContent=fmt(a.currentTime); });
-  seek.addEventListener('input', function(){ if(a.duration) a.currentTime=seek.value/100*a.duration; });
-  var speeds=[1,1.25,1.5,2], si=0;
-  sp.addEventListener('click', function(){ si=(si+1)%speeds.length; a.playbackRate=speeds[si]; sp.textContent=speeds[si]+'×'; });
+  document.querySelectorAll('.player').forEach(function(pl){
+    var a=pl.querySelector('audio'); if(!a) return;
+    var btn=pl.querySelector('.pbtn'), fill=pl.querySelector('.pfill'), seek=pl.querySelector('.pseek'),
+        cur=pl.querySelector('.pcur'), dur=pl.querySelector('.pdur'), sp=pl.querySelector('.speed');
+    btn.addEventListener('click', function(){ if(a.paused){a.play()}else{a.pause()} });
+    a.addEventListener('play', function(){btn.innerHTML=PAUSE;btn.setAttribute('aria-label','Pause episode')});
+    a.addEventListener('pause', function(){btn.innerHTML=PLAY;btn.setAttribute('aria-label','Play episode')});
+    a.addEventListener('loadedmetadata', function(){dur.textContent=fmt(a.duration)});
+    a.addEventListener('timeupdate', function(){ var p=a.duration?a.currentTime/a.duration*100:0; fill.style.width=p+'%'; seek.value=p; cur.textContent=fmt(a.currentTime); });
+    seek.addEventListener('input', function(){ if(a.duration) a.currentTime=seek.value/100*a.duration; });
+    var speeds=[1,1.25,1.5,2], si=0;
+    sp.addEventListener('click', function(){ si=(si+1)%speeds.length; a.playbackRate=speeds[si]; sp.textContent=speeds[si]+'×'; });
+  });
 })();
 """
 
@@ -1209,13 +1270,13 @@ def markets_html(nums):
 def player_html(rec, root):
     if not rec.get("audio"):
         return '<div class="player"><span class="noaudio">No episode for this day.</span></div>'
-    return (f'<div class="player"><button class="pbtn" id="pbtn" type="button" aria-label="Play episode">'
+    return (f'<div class="player"><button class="pbtn" type="button" aria-label="Play episode">'
             f'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>'
             f'<div class="pmeta"><div class="ptitle">Today\'s episode</div>'
-            f'<div class="bar"><div id="pfill"></div><input id="pseek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Seek"></div>'
-            f'<div class="ptime"><span id="pcur">0:00</span><span id="pdur">–:––</span></div></div>'
-            f'<button class="speed" id="pspeed" type="button" aria-label="Playback speed">1×</button>'
-            f'<audio id="aud" preload="metadata" src="{root}audio/{rec["audio"]}"></audio></div>')
+            f'<div class="bar"><div class="pfill"></div><input class="pseek" type="range" min="0" max="100" step="0.1" value="0" aria-label="Seek"></div>'
+            f'<div class="ptime"><span class="pcur">0:00</span><span class="pdur">–:––</span></div></div>'
+            f'<button class="speed" type="button" aria-label="Playback speed">1×</button>'
+            f'<audio preload="metadata" src="{root}audio/{rec["audio"]}"></audio></div>')
 
 
 def _first_sentence(t, n=140):
@@ -1250,7 +1311,7 @@ def tile_btn(sid, label, meta, body, wide=False):
             f'<div class="sum-m">{meta}</div></button>')
 
 
-def day_body(rec, root):
+def _day_variant(rec, root):
     e = html.escape
     note = '<p class="note">Sample numbers (demo mode), not real market data.</p>' if rec.get("demo") else ""
     d = rec.get("data") or parse_brief(rec.get("written", "")) or parse_markdown_brief(rec.get("written", ""))
@@ -1357,8 +1418,16 @@ def day_body(rec, root):
                          for i, (k, _, t) in enumerate(lines))
         sheets.append(sheet("line", "Your interview line",
                             f'<div class="line">{f"<div class=lsegs role=group aria-label=Track>{seg}</div>" if seg else ""}{quotes}'
-                            f'<div class="acts"><button class="lbtn a" type="button" id="copyline">Copy</button>'
+                            f'<div class="acts"><button class="lbtn a copyline" type="button">Copy</button>'
                             f'<a class="lbtn b" href="{root}learn.html">Practice in Learn</a></div></div>'))
+
+    # Words to know (Intern version)
+    gl = [g for g in d.get("glossary", []) if g.get("term")]
+    if gl:
+        tiles.append(tile_btn("words", "Words to know", f'{len(gl)} terms from today',
+                              f'<p class="sum-t sm">{" · ".join(e(g["term"]) for g in gl[:4])}</p>', wide=True))
+        sheets.append(sheet("words", "Words to know", '<div class="gloss">' + "".join(
+            f'<div class="gterm"><h3>{e(g["term"])}</h3><p>{e(g.get("meaning", ""))}</p></div>' for g in gl) + "</div>"))
 
     # Sources
     srcs = "".join(f'<li><a href="{e(x.get("url", ""))}" rel="noopener" target="_blank">{e(x.get("title") or "Source")}</a></li>'
@@ -1371,6 +1440,34 @@ def day_body(rec, root):
     grid = (f'<section class="sec reveal" aria-label="Today\'s sections"><div class="sech"><h2>Today\'s brief</h2>'
             f'<span>Tap a section to read more</span></div><div class="sums">{"".join(tiles)}</div>{src_link}</section>')
     return note + hero + grid + "".join(sheets)
+
+
+LEVEL_BLURB = {"intern": "New to markets: everything explained simply",
+               "analyst": "Knows the basics: interview-level detail",
+               "partner": "Deep and technical: second-order effects"}
+
+
+def _prefix_ids(markup, pre):
+    return re.sub(r'\b(id|aria-controls|aria-labelledby|data-open|for)="([^"]+)"',
+                  lambda m: f'{m.group(1)}="{pre}{m.group(2)}"', markup)
+
+
+def day_body(rec, root):
+    levels = rec.get("levels") or {}
+    if not levels:
+        return _day_variant(rec, root)
+    audios = rec.get("audios") or {}
+    switch = ('<div class="lvlbar" role="group" aria-label="Brief level"><span class="lvl-l">Your level</span>'
+              + "".join(f'<button type="button" class="lvlbtn" data-lvl="{l}" aria-pressed="{"true" if l == "analyst" else "false"}">'
+                        f'{LEVEL_NAMES[l]}</button>' for l in LEVELS)
+              + '</div>')
+    parts = []
+    for l in LEVELS:
+        d = levels.get(l) or levels.get("analyst")
+        r2 = dict(rec, data=d, audio=audios.get(l) or rec.get("audio"))
+        inner = _prefix_ids(_day_variant(r2, root), f"{l}-")
+        parts.append(f'<div class="lvlv" data-level="{l}"{"" if l == "analyst" else " hidden"}>{inner}</div>')
+    return switch + "".join(parts)
 
 
 def short_date(iso):
@@ -1390,7 +1487,7 @@ NETWORK_BODY = """
 </div></section>
 """
 
-def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
+def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None, levels=None, mp3s=None):
     import json
     import shutil
     days = site_dir / "days"
@@ -1404,13 +1501,20 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
         audio_name = f"{iso}.mp3"
         shutil.copyfile(mp3, audio / audio_name)
 
+    audios = {}
+    for lvl, m in (mp3s or {}).items():
+        if m and Path(m).exists():
+            audios[lvl] = f"{iso}-{lvl}.mp3"
+            shutil.copyfile(m, audio / audios[lvl])
+    if audios.get("analyst"):
+        audio_name = audios["analyst"]
     rec = {"iso": iso, "today": today, "nums": nums, "written": written,
-           "audio": audio_name, "demo": demo, "data": data}
+           "audio": audio_name, "demo": demo, "data": data, "levels": levels, "audios": audios}
     (days / f"{iso}.json").write_text(json.dumps(rec), encoding="utf-8")
 
     cutoff = (dt.date.fromisoformat(iso) - dt.timedelta(days=KEEP_AUDIO_DAYS)).isoformat()
     for f in audio.glob("*.mp3"):
-        if f.stem < cutoff:
+        if f.stem[:10] < cutoff:
             f.unlink()
 
     def pill(text):
@@ -1421,6 +1525,7 @@ def build_site(site_dir, iso, today, nums, written, mp3, demo, data=None):
         r = json.loads(f.read_text(encoding="utf-8"))
         if r.get("audio") and not (audio / r["audio"]).exists():
             r["audio"] = None
+        r["audios"] = {k: v for k, v in (r.get("audios") or {}).items() if (audio / v).exists()}
         records.append(r)
         (days / f"{r['iso']}.html").write_text(
             page(f"{SITE_NAME}: {r['today']}", day_body(r, "../"), "../", "archive")
@@ -1476,7 +1581,7 @@ def resolve_market_calls(nums):
         print(f"  ! market call scoring failed: {e}", file=sys.stderr)
 
 
-BRIEF_VERSION = "2026-11-09a"
+BRIEF_VERSION = "2026-11-09b"
 
 
 def main():
@@ -1502,11 +1607,13 @@ def main():
         print(f"  ! {e}", file=sys.stderr)
         written = None
     data = None
+    research = None
     if written:
         written = CITE_RE.sub("", written)
+        research = written
         print("Formatting brief for the app...")
         try:
-            data = structure_brief(written)
+            data = structure_brief(written, "analyst")
         except Exception as e:
             print(f"  ! formatting step failed: {str(e)[:400]}", file=sys.stderr)
         if not data:
@@ -1515,6 +1622,20 @@ def main():
             data = parse_markdown_brief(written)
             if data:
                 print("  used the backup formatter (no AI needed)")
+    levels = {}
+    if data:
+        levels["analyst"] = data
+        for lvl in ("intern", "partner"):
+            try:
+                d_l = structure_brief(research, lvl)
+                if d_l and (d_l.get("stories") or d_l.get("mood")):
+                    levels[lvl] = d_l
+                    print(f"  {lvl} version OK")
+                else:
+                    raise RuntimeError("empty")
+            except Exception as e:
+                print(f"  ! {lvl} version failed ({str(e)[:200]}); using the Analyst version", file=sys.stderr)
+                levels[lvl] = data
     if data:
         written = brief_markdown(data)
         print(f"  formatted OK: {len(data['stories'])} stories, {len(data['deals'])} deals")
@@ -1539,18 +1660,22 @@ def main():
     html_body = build_html(today, nums, written, args.demo)
     (out_dir / path.name.replace(".md", ".html")).write_text(html_body, encoding="utf-8")
 
-    mp3 = None
+    mp3s = {}
     if not args.no_podcast:
-        print("Making podcast...")
-        pod_input = brief
-        if data:
-            pod_input = f"# Morning Brief: {today}\n\n{table}\n\n{brief_markdown(data, full=True)}"
-        mp3 = make_podcast(pod_input, out_dir, path.stem)
+        print("Making podcasts...")
+        for lvl in (LEVELS if levels else ["analyst"]):
+            d_l = levels.get(lvl)
+            pod_input = f"# Morning Brief: {today}\n\n{table}\n\n{brief_markdown(d_l, full=True)}" if d_l else brief
+            m = make_podcast(pod_input, out_dir, path.stem, lvl)
+            if m:
+                mp3s[lvl] = m
+    mp3 = mp3s.get("analyst")
 
     if not args.demo or args.site:
         site_dir = Path(os.getenv("SITE_DIR") or Path(__file__).parent / "docs")
         try:
-            build_site(site_dir, dt.date.today().isoformat(), today, nums, written, mp3, args.demo, data)
+            build_site(site_dir, dt.date.today().isoformat(), today, nums, written, mp3, args.demo, data,
+                       levels=levels or None, mp3s=mp3s)
         except Exception as e:
             print(f"  ! website: {e}", file=sys.stderr)
 
